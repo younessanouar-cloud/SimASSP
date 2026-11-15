@@ -5,7 +5,7 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 ## ✨ Fonctionnalités
 
 - 🗺️ **Parcours de compétences** : les 4 blocs et 16 compétences du référentiel, filtrables par année, bloc et contexte (centre/structure). Niveau de maîtrise réglable (0 à 3).
-- 🎬 **Scénarios professionnels** : 12 situations réalistes (EHPAD, domicile, centre) avec arbres de décision, feedback immédiat et bilan pédagogique.
+- 🎬 **Scénarios professionnels** : plus de 100 situations réalistes (EHPAD, domicile, centre) avec arbres de décision, feedback immédiat et bilan pédagogique.
 - 🪞 **Autoévaluation** : par critères observables (bientraitance, communication, sécurité, limites professionnelles, transmission, réflexivité, qualité, éducation à la santé).
 - 📊 **Tableau de progression** : KPI, progression par bloc et par compétence, historique, export JSON.
 - 👩‍🏫 **Espace enseignant/tuteur** : suivi, liste des scénarios, bilan de progression (mot de passe par défaut `ecbg2026`).
