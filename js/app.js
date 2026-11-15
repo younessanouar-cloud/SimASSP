@@ -118,6 +118,17 @@
   function saveHistory(hist) {
     localStorage.setItem(userKey("simassp_history"), JSON.stringify(hist));
   }
+  // ---------- NIVEAUX DE COMPETENCES ----------
+  function getLevel(id) {
+    if (!STATE.progression) STATE.progression = {};
+    var v = STATE.progression[id];
+    return (v === undefined || v === null) ? 0 : v;
+  }
+  function setLevel(id, level) {
+    if (!STATE.progression) STATE.progression = {};
+    STATE.progression[id] = level;
+    try { saveProgression(); } catch (e) {}
+  }
 
   // ---------- ÉTAT ----------
   var STATE = {
