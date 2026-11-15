@@ -149,7 +149,12 @@
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser) { name = "login"; }
-    // L'espace enseignant est accessible via son propre mot de passe (gate), meme sans compte eleve connecte.
+    // L'espace enseignant est un espace distinct : on deconnecte l'eleve pour y entrer.
+    if (name === "enseignant" && AUTH.currentUser && !STATE.teacherAuth) {
+      AUTH.logout();
+      STATE.progression = {};
+      STATE.autoeval = {};
+    }
     STATE.view = name;
     document.body.classList.toggle("login-mode", name === "login");
     var els = document.querySelectorAll(".view");
@@ -194,6 +199,9 @@
     } else {
       badge.hidden = true;
     }
+    // Masquer l'acces enseignant dans la nav quand un eleve est connecte.
+    var teacherBtn = document.querySelector('.nav__btn--accent[data-nav="enseignant"]');
+    if (teacherBtn) teacherBtn.hidden = !!AUTH.currentUser;
   }
 
   // ---------- LOGIN ----------
@@ -676,12 +684,12 @@
     var classe = document.getElementById("newClasse").value.trim();
     if (!prenom || !nom) { toast("Prénom et nom requis."); return; }
     var res = AUTH.createAccount(prenom, nom, niveau, classe);
-    var r = document.getElementById("newAccountResult");
-    if (r) r.innerHTML = '<div class="feedback feedback--good"><strong>✅ Compte créé</strong><br>Identifiant : <code>' + res.account.login + '</code><br>Mot de passe : <code>' + res.password + '</code><br><span class="muted" style="font-size:.75rem;">Note ce mot de passe, il ne sera plus affiché.</span></div>';
     document.getElementById("newPrenom").value = "";
     document.getElementById("newNom").value = "";
     document.getElementById("newClasse").value = "";
     renderTeacherTab("comptes");
+    var r = document.getElementById("newAccountResult");
+    if (r) r.innerHTML = '<div class="feedback feedback--good"><strong>✅ Compte créé</strong><br>Identifiant : <code>' + res.account.login + '</code><br>Mot de passe : <code>' + res.password + '</code><br><span class="muted" style="font-size:.75rem;">Note ce mot de passe, il ne sera plus affiché.</span></div>';
   };
 
   window.resetPwd = function (id) {
