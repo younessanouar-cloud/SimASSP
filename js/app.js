@@ -1,5 +1,6 @@
 /* ============================================================
-   SimASSP — Logique applicative
+   SimASSP — Logique applicative (enrichie)
+   Indices progressifs, variantes, adaptatif, voix, enseignant
    ============================================================ */
 (function () {
   "use strict";
@@ -9,12 +10,15 @@
   const STATE = {
     view: "accueil",
     scenario: null,
+    variant: null,
     stepIndex: 0,
     score: 0,
     answers: [],
+    hintLevel: 0,
     autoeval: {},
     progression: loadProgression(),
-    teacherAuth: false
+    teacherAuth: false,
+    voiceOn: false
   };
 
   function loadProgression() {
@@ -38,7 +42,6 @@
     document.querySelectorAll(".nav__btn").forEach(b => {
       b.classList.toggle("nav__btn--active", b.dataset.nav === name);
     });
-    // rendu à la demande
     if (name === "parcours") renderParcours();
     if (name === "scenarios") renderScenarios();
     if (name === "autoeval") renderAutoeval();
@@ -47,6 +50,7 @@
     if (name === "accueil") renderAccueil();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  window.showView = showView;
   document.querySelectorAll("[data-nav]").forEach(b => {
     b.addEventListener("click", () => showView(b.dataset.nav));
   });
@@ -56,7 +60,6 @@
 
   // ---------- ACCUEIL ----------
   function renderAccueil() {
-    // blocs
     const grid = document.getElementById("blocsGrid");
     grid.innerHTML = D.BLOCS.map(b => `
       <div class="bloc-card" style="border-left-color:${b.color}" onclick="showView('parcours')">
@@ -72,7 +75,6 @@
       </div>
     `).join("");
 
-    // timeline
     const tl = document.getElementById("timeline");
     tl.innerHTML = D.TIMELINE.map(t => `
       <div class="tl-card">
@@ -134,14 +136,13 @@
     renderParcours();
     toast(`Niveau mis à jour : ${D.NIVEAUX.find(n=>n.code===level).label}`);
   };
-
-  // filtres
   ["filtreAnnee","filtreBloc","filtreContexte"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", renderParcours);
   });
 
   // ---------- SCÉNARIOS ----------
+  function diffLabel(d) { return d===1?"🟢 Facile":d===2?"🟡 Moyen":"🔴 Avancé"; }
   function renderScenarios() {
     const list = document.getElementById("scenarioList");
     list.innerHTML = D.SCENARIOS.map(s => {
@@ -149,7 +150,7 @@
       return `
         <div class="scenario-item ${STATE.scenario && STATE.scenario.id===s.id ? 'scenario-item--active':''}" onclick="openScenario('${s.id}')">
           <div class="scenario-item__title">${b.emoji} ${s.titre}</div>
-          <div class="scenario-item__meta">${s.bloc} · ${s.annee==="2"?"2de":s.annee==="1"?"1re":"Tle"} · ${s.contexte} · ${s.duree}</div>
+          <div class="scenario-item__meta">${s.bloc} · ${s.annee==="2"?"2de":s.annee==="1"?"1re":"Tle"} · ${s.contexte} · ${s.duree} · ${diffLabel(s.difficulte||1)}</div>
         </div>
       `;
     }).join("");
@@ -160,11 +161,13 @@
       renderScenarioPlay();
     }
   }
-  window.openScenario = function (id) {
+  window.openScenario = function (id, variantIdx) {
     STATE.scenario = D.SCENARIOS.find(s=>s.id===id);
+    STATE.variant = (variantIdx !== undefined && STATE.scenario.variantes && STATE.scenario.variantes[variantIdx]) ? STATE.scenario.variantes[variantIdx] : null;
     STATE.stepIndex = 0;
     STATE.score = 0;
     STATE.answers = [];
+    STATE.hintLevel = 0;
     renderScenarios();
   };
 
@@ -176,22 +179,41 @@
     const detail = document.getElementById("scenarioDetail");
 
     if (idx >= total) {
-      // bilan
       const pct = Math.round((STATE.score / total) * 100);
+      const low = pct < 70;
+      // remédiation
+      let remediationHtml = "";
+      if (low) {
+        const cand = (D.REMEDIATION[s.bloc] || []).filter(x => x !== s.id).slice(0,3);
+        remediationHtml = `
+          <div class="gap-card" style="margin-top:14px;">
+            <strong>🎯 Parcours adaptatif — remédiation proposée</strong><br>
+            Ton score est sous 70%. Je te propose de travailler ces scénarios complémentaires :
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+              ${cand.map(id => {
+                const sc = D.SCENARIOS.find(x=>x.id===id);
+                return `<button class="btn btn--sm btn--accent" onclick="openScenario('${id}')">${sc ? sc.titre : id}</button>`;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }
       detail.innerHTML = `
         <div class="scenario-play">
           <div class="scenario-play__header">
-            <div class="scenario-play__title">🏁 Bilan — ${s.titre}</div>
+            <div class="scenario-play__title">🏁 Bilan — ${s.titre}${STATE.variant ? " (variante)" : ""}</div>
             <span class="chip" style="background:${b.color};color:#fff">${s.bloc}</span>
           </div>
           <div class="progress-bar"><div class="progress-bar__fill" style="width:100%"></div></div>
           <div style="text-align:center;margin:20px 0;">
             <div style="font-size:3rem;font-weight:800;color:${pct>=70?'var(--c-accent)':'var(--c-warn)'}">${pct}%</div>
             <div style="color:var(--c-muted);">Score : ${STATE.score} / ${total} bonnes décisions</div>
+            <div style="margin-top:6px;">${diffLabel(s.difficulte||1)}</div>
           </div>
           <div class="feedback ${pct>=70?'feedback--good':'feedback--warn'}">
             <strong>📋 Analyse pédagogique</strong><br>${s.bilan}
           </div>
+          ${remediationHtml}
           <div style="margin-top:18px;">
             <h3 style="color:var(--c-primary);">🪞 Question de réflexivité</h3>
             <p class="muted">Qu'aurais-tu fait différemment et pourquoi ?</p>
@@ -200,7 +222,8 @@
           <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
             <button class="btn btn--primary" onclick="finishScenario()">✅ Valider et enregistrer</button>
             <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="replayScenario()">🔁 Rejouer</button>
-            <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openScenario('${s.id}')">🆕 Nouvelle tentative</button>
+            ${s.variantes && s.variantes.length ? `<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="showVariants()">🔀 Variantes</button>` : ""}
+            <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="askMatheo()">🤖 Demander à Mathéo</button>
           </div>
         </div>
       `;
@@ -208,17 +231,26 @@
     }
 
     const step = s.steps[idx];
+    const hints = s.hints || [];
+    const hintHtml = STATE.hintLevel > 0 && hints.length
+      ? `<div class="hint">💡 Indice ${STATE.hintLevel}/${hints.length} : ${hints[STATE.hintLevel-1]}</div>`
+      : "";
     detail.innerHTML = `
       <div class="scenario-play">
         <div class="scenario-play__header">
-          <div class="scenario-play__title">${s.titre}</div>
-          <span class="chip" style="background:${b.color};color:#fff">${s.bloc} · ${idx+1}/${total}</span>
+          <div class="scenario-play__title">${s.titre}${STATE.variant ? " — " + STATE.variant.titre : ""}</div>
+          <span class="chip" style="background:${b.color};color:#fff">${s.bloc} · ${idx+1}/${total} · ${diffLabel(s.difficulte||1)}</span>
         </div>
+        ${STATE.variant ? `<div class="feedback feedback--warn" style="margin-bottom:10px;"><strong>Variante :</strong> ${STATE.variant.description}</div>` : ""}
         <div class="progress-bar"><div class="progress-bar__fill" style="width:${(idx/total*100)}%"></div></div>
         <div class="scenario-step">
           <div class="scenario-step__q">${step.q}</div>
           ${step.choices.map((ch,i)=>`<button class="choice" onclick="chooseAnswer(${i})">${String.fromCharCode(65+i)}. ${ch.text}</button>`).join("")}
-          ${step.hint ? `<div class="hint">💡 Indice : ${step.hint}</div>` : ""}
+          ${hintHtml}
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            ${hints.length ? `<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="revealHint()">💡 Indice (${STATE.hintLevel}/${hints.length})</button>` : ""}
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="speak('${escapeJs(step.q)}')">🔊 Lire</button>
+          </div>
         </div>
       </div>
     `;
@@ -250,30 +282,80 @@
 
   window.nextStep = function () {
     STATE.stepIndex++;
+    STATE.hintLevel = 0;
     renderScenarioPlay();
   };
 
+  window.revealHint = function () {
+    const s = STATE.scenario;
+    const hints = s.hints || [];
+    if (STATE.hintLevel < hints.length) {
+      STATE.hintLevel++;
+      renderScenarioPlay();
+    } else {
+      toast("Tous les indices ont été révélés.");
+    }
+  };
+
   window.replayScenario = function () {
-    STATE.stepIndex = 0; STATE.score = 0; STATE.answers = [];
+    STATE.stepIndex = 0; STATE.score = 0; STATE.answers = []; STATE.hintLevel = 0;
     renderScenarioPlay();
+  };
+
+  window.showVariants = function () {
+    const s = STATE.scenario;
+    if (!s.variantes || !s.variantes.length) return;
+    const html = `
+      <h3 style="color:var(--c-primary);">🔀 Variantes du scénario</h3>
+      <p class="muted">Choisis une variante pour rejouer avec un contexte différent.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+        <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);text-align:left;" onclick="openScenario('${s.id}');closeModal();">Standard (sans variante)</button>
+        ${s.variantes.map((v,i)=>`<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);text-align:left;" onclick="openScenario('${s.id}',${i});closeModal();">${v.titre}<br><span class='muted' style='font-size:.75rem;'>${v.description}</span></button>`).join("")}
+      </div>
+    `;
+    openModal(html);
   };
 
   window.finishScenario = function () {
     const s = STATE.scenario;
     const reflex = (document.getElementById("reflexText") || {}).value || "";
-    // mise à jour progression : +1 niveau sur les compétences liées au bloc (simulation)
     const related = D.COMPETENCES.filter(c => c.bloc === s.bloc);
     related.forEach(c => {
       const cur = getLevel(c.id);
       if (cur < 3) setLevel(c.id, Math.min(3, cur + (STATE.score >= s.steps.length * 0.7 ? 1 : 0)));
     });
-    // sauvegarde historique
     const hist = JSON.parse(localStorage.getItem("simassp_history") || "[]");
-    hist.unshift({ date: new Date().toLocaleString("fr-FR"), scenario: s.titre, bloc: s.bloc, score: STATE.score, total: s.steps.length, reflex });
-    localStorage.setItem("simassp_history", JSON.stringify(hist.slice(0, 50)));
+    hist.unshift({ date: new Date().toLocaleString("fr-FR"), scenario: s.titre, bloc: s.bloc, score: STATE.score, total: s.steps.length, reflex, variant: STATE.variant ? STATE.variant.titre : null });
+    localStorage.setItem("simassp_history", JSON.stringify(hist.slice(0, 100)));
     toast("Scénario enregistré dans ton parcours ✅");
     showView("dashboard");
   };
+
+  window.askMatheo = function () {
+    const s = STATE.scenario;
+    const url = "https://you45-assistant-mr-anouar.hf.space";
+    const prompt = encodeURIComponent(`Je viens de réaliser le scénario "${s.titre}" (bloc ${s.bloc}) et j'ai obtenu ${STATE.score}/${s.steps.length}. Peux-tu m'expliquer ce que j'aurais pu mieux faire et me donner des conseils pour progresser ?`);
+    openModal(`
+      <h3 style="color:var(--c-primary);">🤖 Demander à Mathéo IA</h3>
+      <p class="muted">Ouvre l'assistant pédagogique dans un nouvel onglet avec un prompt pré-rempli.</p>
+      <div style="margin:12px 0;padding:12px;background:#f1f5f9;border-radius:8px;font-size:.85rem;">
+        <strong>Prompt :</strong> Je viens de réaliser le scénario "${s.titre}" (bloc ${s.bloc}) et j'ai obtenu ${STATE.score}/${s.steps.length}. Peux-tu m'expliquer ce que j'aurais pu mieux faire ?
+      </div>
+      <a href="${url}?prompt=${prompt}" target="_blank" class="btn btn--primary">Ouvrir Mathéo IA ↗</a>
+      <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);margin-left:8px;" onclick="closeModal()">Fermer</button>
+    `);
+  };
+
+  // ---------- VOIX (Web Speech API) ----------
+  function speak(text) {
+    if (!("speechSynthesis" in window)) { toast("Synthèse vocale non supportée par ce navigateur."); return; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR"; u.rate = 0.95; u.pitch = 1;
+    window.speechSynthesis.speak(u);
+  }
+  window.speak = speak;
+  window.escapeJs = function (s) { return (s||"").replace(/'/g,"\\'").replace(/"/g,'\\"'); };
 
   // ---------- AUTOÉVAL ----------
   function renderAutoeval() {
@@ -302,8 +384,10 @@
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn--primary" onclick="saveAutoeval()">💾 Enregistrer</button>
         <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="resetAutoeval()">🔄 Réinitialiser</button>
+        <button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="compareTuteur()">👥 Comparer avec tuteur</button>
       </div>
       <div id="gapContainer"></div>
+      <div id="compareContainer"></div>
     `;
     updateGap();
   }
@@ -332,6 +416,29 @@
       gap.innerHTML = `<div class="gap-card"><strong>🎯 Points à retravailler :</strong><br>${low.map(c=>`• ${c.label} (${STATE.autoeval[c.id] || 0}/3)`).join("<br>")}<br><br><span class="muted">Demande à ton tuteur d'évaluer les mêmes critères pour comparer.</span></div>`;
     }
   }
+  window.compareTuteur = function () {
+    const tuteur = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}");
+    const c = document.getElementById("compareContainer");
+    if (Object.keys(tuteur).length === 0) {
+      c.innerHTML = `<div class="gap-card" style="background:#e3f2fd;border-left-color:#1565c0;"><strong>👥 Évaluation tuteur</strong><br>Aucune évaluation tuteur enregistrée. L'enseignant peut en saisir une dans l'espace enseignant.</div>`;
+      return;
+    }
+    c.innerHTML = `
+      <div class="chart-card" style="margin-top:14px;">
+        <h3>👥 Comparaison élève / tuteur</h3>
+        <table class="table"><thead><tr><th>Critère</th><th>Élève</th><th>Tuteur</th><th>Écart</th></tr></thead><tbody>
+          ${D.CRITERES.map(cr => {
+            const e = STATE.autoeval[cr.id] || 0;
+            const t = tuteur[cr.id] || 0;
+            const ecart = e - t;
+            const color = ecart === 0 ? "var(--c-accent)" : (ecart > 0 ? "var(--c-warn)" : "var(--c-danger)");
+            return `<tr><td>${cr.label}</td><td>${e}/3</td><td>${t}/3</td><td style="color:${color};font-weight:700;">${ecart>0?'+':''}${ecart}</td></tr>`;
+          }).join("")}
+        </tbody></table>
+        <p class="muted" style="margin-top:8px;font-size:.75rem;">Écart positif = autoévaluation plus optimiste que le tuteur. Écart négatif = plus sévère.</p>
+      </div>
+    `;
+  };
 
   // ---------- DASHBOARD ----------
   function renderDashboard() {
@@ -344,7 +451,6 @@
     const avg = total ? (Object.values(prog).reduce((a,b)=>a+b,0) / total).toFixed(1) : "0.0";
     const hist = JSON.parse(localStorage.getItem("simassp_history") || "[]");
 
-    // par bloc
     const byBloc = D.BLOCS.map(b => {
       const cs = comps.filter(c=>c.bloc===b.code);
       const lvl = cs.reduce((a,c)=>a+(prog[c.id]||0),0);
@@ -391,7 +497,7 @@
         <h3>📜 Historique des scénarios</h3>
         ${hist.length === 0 ? `<p class="muted">Aucun scénario réalisé pour l'instant.</p>` :
           `<table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>
-            ${hist.map(h=>`<tr><td>${h.date}</td><td>${h.scenario}</td><td>${h.bloc}</td><td>${h.score}/${h.total}</td></tr>`).join("")}
+            ${hist.map(h=>`<tr><td>${h.date}</td><td>${h.scenario}${h.variant?' ('+h.variant+')':''}</td><td>${h.bloc}</td><td>${h.score}/${h.total}</td></tr>`).join("")}
           </tbody></table>`}
       </div>
 
@@ -453,7 +559,11 @@
       const hist = JSON.parse(localStorage.getItem("simassp_history") || "[]");
       c.innerHTML = `
         <h3 style="color:var(--c-primary);">👥 Suivi des scénarios réalisés</h3>
-        <p class="muted">Données locales du navigateur. En production, connecter à une base partagée.</p>
+        <p class="muted">Données locales du navigateur. Pour un suivi multi-élèves, importer les exports JSON des élèves.</p>
+        <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn--sm btn--accent" onclick="importEleveData()">📥 Importer données élève</button>
+          <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportTuteurEval()">📤 Exporter éval. tuteur</button>
+        </div>
         ${hist.length === 0 ? `<p class="muted">Aucun scénario réalisé.</p>` :
           `<table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th><th>Réflexivité</th></tr></thead><tbody>
             ${hist.map(h=>`<tr><td>${h.date}</td><td>${h.scenario}</td><td>${h.bloc}</td><td>${h.score}/${h.total}</td><td style="max-width:200px;font-size:.75rem;">${h.reflex||"—"}</td></tr>`).join("")}
@@ -461,24 +571,113 @@
       `;
     } else if (tab === "scenarios") {
       c.innerHTML = `
-        <h3 style="color:var(--c-primary);">🎬 Scénarios disponibles</h3>
-        <p class="muted">Liste des ${D.SCENARIOS.length} scénarios du MVP. Éditable dans js/data.js.</p>
-        <table class="table"><thead><tr><th>ID</th><th>Titre</th><th>Bloc</th><th>Année</th><th>Contexte</th><th>Durée</th></tr></thead><tbody>
-          ${D.SCENARIOS.map(s=>`<tr><td>${s.id}</td><td>${s.titre}</td><td>${s.bloc}</td><td>${s.annee==="2"?"2de":s.annee==="1"?"1re":"Tle"}</td><td>${s.contexte}</td><td>${s.duree}</td></tr>`).join("")}
+        <h3 style="color:var(--c-primary);">🎬 Scénarios disponibles (${D.SCENARIOS.length})</h3>
+        <p class="muted">Liste des scénarios du MVP. Éditable dans js/data.js. Créer un nouveau scénario :</p>
+        <div class="card" style="margin-bottom:16px;">
+          <h4 style="color:var(--c-primary);margin:0 0 8px;">➕ Nouveau scénario (modèle)</h4>
+          <p class="muted" style="font-size:.8rem;">Les scénarios sont définis dans <code>js/data.js</code>. Structure : id, bloc, annee, contexte, duree, difficulte, competences[], titre, description, hints[], variantes[], steps[{q, choices[{text,correct,feedback}]}], bilan.</p>
+        </div>
+        <table class="table"><thead><tr><th>ID</th><th>Titre</th><th>Bloc</th><th>Année</th><th>Contexte</th><th>Durée</th><th>Diff.</th></tr></thead><tbody>
+          ${D.SCENARIOS.map(s=>`<tr><td>${s.id}</td><td>${s.titre}</td><td>${s.bloc}</td><td>${s.annee==="2"?"2de":s.annee==="1"?"1re":"Tle"}</td><td>${s.contexte}</td><td>${s.duree}</td><td>${s.difficulte||1}</td></tr>`).join("")}
         </tbody></table>
       `;
     } else if (tab === "bilans") {
       const prog = STATE.progression;
       const comps = D.COMPETENCES;
+      // évaluation tuteur
+      const tuteurSaved = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}");
       c.innerHTML = `
         <h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>
-        <p class="muted">Niveaux par compétence (données locales).</p>
+        <p class="muted">Niveaux par compétence (données locales). Saisir l'évaluation tuteur :</p>
+        <div class="card" style="margin-bottom:16px;">
+          <h4 style="color:var(--c-primary);margin:0 0 8px;">👩‍🏫 Évaluation tuteur (par critère)</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            ${D.CRITERES.map(cr => `
+              <label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">${cr.label}
+                <select id="tuteur_${cr.id}" style="width:100%;padding:6px;border:1px solid var(--c-border);border-radius:6px;">
+                  ${[0,1,2,3].map(n=>`<option value="${n}" ${tuteurSaved[cr.id]===n?'selected':''}>${n}</option>`).join("")}
+                </select>
+              </label>
+            `).join("")}
+          </div>
+          <button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">💾 Enregistrer éval. tuteur</button>
+        </div>
         <table class="table"><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>
           ${comps.map(c=>`<tr><td>${c.id} — ${c.titre}</td><td>${c.bloc}</td><td>${prog[c.id]||0}/3</td></tr>`).join("")}
         </tbody></table>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">📄 Exporter bilan PDF</button>
+        </div>
       `;
     }
   }
+  window.saveTuteurEval = function () {
+    const obj = {};
+    D.CRITERES.forEach(cr => {
+      const sel = document.getElementById("tuteur_" + cr.id);
+      if (sel) obj[cr.id] = parseInt(sel.value);
+    });
+    localStorage.setItem("simassp_tuteur_eval", JSON.stringify(obj));
+    toast("Évaluation tuteur enregistrée 👩‍🏫");
+  };
+  window.importEleveData = function () {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = "application/json";
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.progression) {
+            // fusion : garder le max par compétence
+            Object.keys(data.progression).forEach(k => {
+              const cur = STATE.progression[k] || 0;
+              STATE.progression[k] = Math.max(cur, data.progression[k]);
+            });
+            saveProgression();
+          }
+          if (data.history) {
+            const hist = JSON.parse(localStorage.getItem("simassp_history") || "[]");
+            const merged = [...data.history, ...hist].slice(0, 100);
+            localStorage.setItem("simassp_history", JSON.stringify(merged));
+          }
+          toast("Données élève importées ✅");
+          renderTeacherTab("suivi");
+        } catch (err) { toast("Fichier invalide ❌"); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+  window.exportTuteurEval = function () {
+    const tuteur = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}");
+    const blob = new Blob([JSON.stringify(tuteur, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "eval_tuteur.json"; a.click();
+    URL.revokeObjectURL(url);
+    toast("Exporté 📤");
+  };
+  window.exportBilanPDF = function () {
+    const w = window.open("", "_blank");
+    const prog = STATE.progression;
+    const comps = D.COMPETENCES;
+    w.document.write(`
+      <!DOCTYPE html><html><head><title>Bilan SimASSP</title>
+      <style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#1e3a5f;color:#fff;}h1{color:#1e3a5f;}</style>
+      </head><body>
+      <h1>Bilan de progression — SimASSP</h1>
+      <p>Date : ${new Date().toLocaleDateString("fr-FR")}</p>
+      <table><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>
+      ${comps.map(c=>`<tr><td>${c.id} — ${c.titre}</td><td>${c.bloc}</td><td>${prog[c.id]||0}/3</td></tr>`).join("")}
+      </tbody></table>
+      <script>window.print();</script>
+      </body></html>
+    `);
+    w.document.close();
+  };
+  window.closeModal = function () { document.getElementById("modal").hidden = true; };
 
   // ---------- TOAST ----------
   let toastTimer;
@@ -490,7 +689,7 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
   };
 
-  // ---------- MODAL (utilitaire) ----------
+  // ---------- MODAL ----------
   window.openModal = function (html) {
     document.getElementById("modalContent").innerHTML = html;
     document.getElementById("modal").hidden = false;
@@ -506,7 +705,6 @@
   function init() {
     window.showView = showView;
     renderAccueil();
-    // hide loader
     setTimeout(() => document.getElementById("loader").classList.add("loader--hidden"), 600);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
