@@ -753,11 +753,15 @@
       var structure = d.structure || "";
       var dateDebut = d.dateDebut || "";
       var dateFin = d.dateFin || "";
+      var objEleve = d.objectifsEleve || "";
+      var objTuteur = d.objectifsTuteur || "";
       html += '<div class="card" style="margin-bottom:16px;">' +
         '<h3 style="color:var(--c-primary);margin:0 0 6px;">' + p.titre + '</h3>' +
         '<p class="muted" style="font-size:.85rem;margin:0 0 10px;">' + p.objectifs + '</p>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Structure d\'accueil<input type="text" id="pfmp_structure_' + p.id + '" class="input" value="' + structure.replace(/"/g, '&quot;') + '" placeholder="Nom de la structure" /></label>' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Mes objectifs (renseignés par l\'élève)<textarea id="pfmp_objeleve_' + p.id + '" class="input" rows="3" style="width:100%;min-width:0;">' + objEleve.replace(/</g, '&lt;') + '</textarea></label>' +
+        (objTuteur ? '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Objectifs du tuteur (lecture seule)<textarea class="input" rows="3" style="width:100%;min-width:0;background:#f5f5f5;" readonly>' + objTuteur.replace(/</g, '&lt;') + '</textarea></label>' : '') +
         '<div></div>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
@@ -777,7 +781,9 @@
     if (!u) return;
     var input = document.getElementById("pfmp_structure_" + pfmpId);
     var structure = input ? input.value.trim() : "";
-    savePFMPData(u.login, pfmpId, { structure: structure });
+    var objInput = document.getElementById("pfmp_objeleve_" + pfmpId);
+    var objectifsEleve = objInput ? objInput.value.trim() : "";
+    savePFMPData(u.login, pfmpId, { structure: structure, objectifsEleve: objectifsEleve });
     try { saveStudentData(); } catch (e) {}
     toast("Structure enregistrée ✅");
   };
@@ -1027,6 +1033,8 @@
       var structure = d.structure || "";
       var dateDebut = d.dateDebut || "";
       var dateFin = d.dateFin || "";
+      var objEleve = d.objectifsEleve || "";
+      var objTuteur = d.objectifsTuteur || "";
       html += '<div class="card" style="margin-bottom:16px;">' +
         '<h4 style="color:var(--c-primary);margin:0 0 6px;">' + p.titre + '</h4>' +
         '<p class="muted" style="font-size:.85rem;margin:0 0 10px;">' + p.objectifs + '</p>' +
@@ -1038,6 +1046,8 @@
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de début<input type="date" id="pfmp_debut_' + p.id + '" class="input" value="' + dateDebut + '" /></label>' +
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de fin<input type="date" id="pfmp_fin_' + p.id + '" class="input" value="' + dateFin + '" /></label>' +
         '</div>' +
+        (objEleve ? '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Objectifs de l\'élève (lecture seule)<textarea class="input" rows="3" style="width:100%;min-width:0;background:#f5f5f5;" readonly>' + objEleve.replace(/</g, '&lt;') + '</textarea></label>' : '') +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Objectifs du tuteur<textarea id="pfmp_objtuteur_' + p.id + '" class="input" rows="3" style="width:100%;min-width:0;">' + objTuteur.replace(/</g, '&lt;') + '</textarea></label>' +
         '<button class="btn btn--primary btn--sm" onclick="savePFMPTeacher(\'' + p.id + '\')">💾 Enregistrer les dates</button>' +
         '</div>';
     });
@@ -1058,8 +1068,10 @@
     var fin = document.getElementById("pfmp_fin_" + pfmpId);
     var dateDebut = debut ? debut.value : "";
     var dateFin = fin ? fin.value : "";
-    savePFMPData(login, pfmpId, { dateDebut: dateDebut, dateFin: dateFin });
-    toast("Dates enregistrées ✅");
+    var objInput = document.getElementById("pfmp_objtuteur_" + pfmpId);
+    var objectifsTuteur = objInput ? objInput.value.trim() : "";
+    savePFMPData(login, pfmpId, { dateDebut: dateDebut, dateFin: dateFin, objectifsTuteur: objectifsTuteur });
+    toast("Données enregistrées ✅");
   };
   window.renderPFMPTab = renderPFMPTab;
 
