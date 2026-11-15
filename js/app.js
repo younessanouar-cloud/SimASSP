@@ -1011,15 +1011,14 @@
     var comps = D.COMPETENCES;
     var students = loadStudentsData();
     var logins = Object.keys(students);
-    // Inclure l'eleve connecte s'il existe
     var u = AUTH.currentUser;
     if (u && !students[u.login]) {
-      students[u.login] = { name: u.prenom + " " + u.nom, progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory(), imported: "connecté" };
+      students[u.login] = { name: u.prenom + " " + u.nom, progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory(), imported: "connecte" };
       logins = Object.keys(students);
     }
     if (logins.length === 0) {
       c.innerHTML = '<h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>' +
-        '<p class="muted">Aucun élève disponible. Importe les exports JSON des élèves dans l\'onglet Suivi, ou connecte-toi en tant qu\'élève.</p>';
+        '<p class="muted">Aucun eleve disponible. Importe les exports JSON des eleves dans l\'onglet Suivi, ou connecte-toi en tant qu\'eleve.</p>';
       return;
     }
     if (!STATE.bilanSelectedStudent || logins.indexOf(STATE.bilanSelectedStudent) === -1) {
@@ -1029,7 +1028,16 @@
     var s = students[selectedLogin];
     var prog = s.progression || {};
     var tuteurEvals = loadTuteurEvals();
-    var tuteurSaved = tuteurEvals[selectedLogin] || {};
+    var te = tuteurEvals[selectedLogin] || {};
+    var tuteurCriteres = (te.criteres !== undefined) ? te.criteres : (te.criteres_old || te);
+    // Retrocompatibilite : ancien format = objet plat {cr_id: niveau}
+    if (tuteurCriteres === te && !te.criteres && !te.competences) {
+      // ancien format : te contient directement les criteres
+      var hasCritere = false;
+      D.CRITERES.forEach(function (cr) { if (te[cr.id] !== undefined) hasCritere = true; });
+      if (hasCritere) { tuteurCriteres = te; }
+    }
+    var tuteurCompetences = te.competences || {};
     var studentName = s.name || selectedLogin;
     var vals = Object.keys(prog).map(function (k) { return prog[k]; });
     var avg = vals.length ? (vals.reduce(function (a, b) { return a + b; }, 0) / comps.length).toFixed(1) : "0.0";
@@ -1040,35 +1048,63 @@
       var v = Object.keys(sprog).map(function (k) { return sprog[k]; });
       var a = v.length ? (v.reduce(function (x, y) { return x + y; }, 0) / comps.length).toFixed(1) : "0.0";
       var d = comps.filter(function (cp) { return (sprog[cp.id] || 0) >= 2; }).length;
-      return '<tr><td>' + (st.name || login) + '</td><td>' + login + '</td><td>' + d + '/' + comps.length + '</td><td>' + a + '/3</td><td style="font-size:.75rem;">' + (st.imported || "—") + '</td></tr>';
+      return '<tr><td>' + (st.name || login) + '</td><td>' + login + '</td><td>' + d + '/' + comps.length + '</td><td>' + a + '/3</td><td style="font-size:.75rem;">' + (st.imported || "\u2014") + '</td></tr>';
     }).join("");
     var options = logins.map(function (l) {
       return '<option value="' + l + '"' + (l === selectedLogin ? ' selected' : '') + '>' + (students[l].name || l) + '</option>';
     }).join("");
+    var compRows = comps.map(function (cp) {
+      var el = prog[cp.id] || 0;
+      var tu = tuteurCompetences[cp.id];
+      var tuVal = (tu === undefined) ? "" : tu;
+      var ecart = (tu === undefined) ? "\u2014" : (el - tu);
+      var ecartColor = (tu === undefined) ? "var(--c-muted)" : (ecart === 0 ? "var(--c-accent)" : (ecart > 0 ? "var(--c-warn)" : "var(--c-danger)"));
+      var opts = [0,1,2,3].map(function (n) { return '<option value="' + n + '"' + (tuVal === n ? ' selected' : '') + '>' + n + '</option>'; }).join("");
+      return '<tr><td>' + cp.id + ' \u2014 ' + cp.titre + '</td><td>' + cp.bloc + '</td><td style="text-align:center;font-weight:700;">' + el + '/3</td><td><select id="tuteurcomp_' + cp.id + '" style="width:60px;padding:4px;border:1px solid var(--c-border);border-radius:6px;">' + opts + '</select></td><td style="text-align:center;font-weight:700;color:' + ecartColor + ';">' + (tu === undefined ? "\u2014" : ((ecart > 0 ? '+' : '') + ecart)) + '</td></tr>';
+    }).join("");
     c.innerHTML = '<h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>' +
-      '<div style="margin-bottom:12px;"><label style="font-size:.85rem;font-weight:600;color:var(--c-muted);">Élève : <select id="bilanStudentSelect" class="input" style="width:auto;min-width:200px;">' + options + '</select></label></div>' +
-      '<p class="muted">Élève sélectionné : <strong>' + studentName + '</strong> · ' + done + '/' + comps.length + ' compétences ≥2 · Niveau moyen ' + avg + '/3</p>' +
-      '<div class="card" style="margin-bottom:16px;"><h4 style="color:var(--c-primary);margin:0 0 8px;">👩‍🏫 Évaluation tuteur (par critère) — ' + studentName + '</h4>' +
+      '<div style="margin-bottom:12px;"><label style="font-size:.85rem;font-weight:600;color:var(--c-muted);">Eleve : <select id="bilanStudentSelect" class="input" style="width:auto;min-width:200px;">' + options + '</select></label></div>' +
+      '<p class="muted">Eleve selectionne : <strong>' + studentName + '</strong> · ' + done + '/' + comps.length + ' competences ≥2 · Niveau moyen ' + avg + '/3</p>' +
+      '<div class="card" style="margin-bottom:16px;"><h4 style="color:var(--c-primary);margin:0 0 8px;">Evaluation tuteur (par critere) \u2014 ' + studentName + '</h4>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
       D.CRITERES.map(function (cr) {
         return '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">' + cr.label + '<select id="tuteur_' + cr.id + '" style="width:100%;padding:6px;border:1px solid var(--c-border);border-radius:6px;">' +
-          [0, 1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (tuteurSaved[cr.id] === n ? ' selected' : '') + '>' + n + '</option>'; }).join("") + '</select></label>';
+          [0, 1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (tuteurCriteres[cr.id] === n ? ' selected' : '') + '>' + n + '</option>'; }).join("") + '</select></label>';
       }).join("") + '</div>' +
-      '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">💾 Enregistrer éval. tuteur pour ' + studentName + '</button></div>' +
-      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📊 Progression des compétences — ' + studentName + '</h4>' +
-      '<table class="table"><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>' +
-      comps.map(function (cp) { return '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td>' + (prog[cp.id] || 0) + '/3</td></tr>'; }).join("") +
-      '</tbody></table>' +
-      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">👥 Suivi des élèves importés (' + Object.keys(students).length + ')</h4>' +
-      (Object.keys(students).length === 0 ? '<p class="muted">Aucun élève importé. Utilise "📥 Importer données élève" dans l\'onglet Suivi.</p>' :
-        '<table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
-      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">📄 Exporter bilan PDF</button></div>';
+      '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">Enregistrer eval. tuteur pour ' + studentName + '</button></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">Competences : eleve vs tuteur \u2014 ' + studentName + '</h4>' +
+      '<p class="muted" style="font-size:.8rem;">Niveau eleve (autoevaluation) vs niveau tuteur. Ecart positif = eleve plus optimiste.</p>' +
+      '<table class="table"><thead><tr><th>Competence</th><th>Bloc</th><th>Eleve</th><th>Tuteur</th><th>Ecart</th></tr></thead><tbody>' + compRows + '</tbody></table>' +
+      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--primary btn--sm" onclick="saveTuteurCompetences()">Enregistrer eval. competences tuteur</button></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">Suivi des eleves importes (' + Object.keys(students).length + ')</h4>' +
+      (Object.keys(students).length === 0 ? '<p class="muted">Aucun eleve importe. Utilise "Importer donnees eleve" dans l\'onglet Suivi.</p>' :
+        '<table class="table"><thead><tr><th>Eleve</th><th>Identifiant</th><th>Competences >=2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
+      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">Exporter bilan PDF</button></div>';
     var sel = document.getElementById("bilanStudentSelect");
     if (sel) sel.addEventListener("change", function () {
       STATE.bilanSelectedStudent = this.value;
       renderBilansTab(c);
     });
   }
+
+  window.saveTuteurCompetences = function () {
+    var comps = D.COMPETENCES;
+    var obj = {};
+    comps.forEach(function (cp) {
+      var sel = document.getElementById("tuteurcomp_" + cp.id);
+      if (sel) obj[cp.id] = parseInt(sel.value);
+    });
+    var login = STATE.bilanSelectedStudent;
+    if (login) {
+      var evals = loadTuteurEvals();
+      if (!evals[login]) evals[login] = {};
+      if (!evals[login].competences) evals[login].competences = {};
+      evals[login].competences = obj;
+      saveTuteurEvals(evals);
+    }
+    toast("Evaluation competences tuteur enregistree");
+    renderBilansTab(document.getElementById("teacherTabContent"));
+  };
 
   window.saveTuteurEval = function () {
     var obj = {};
@@ -1079,7 +1115,10 @@
     var login = STATE.bilanSelectedStudent;
     if (login) {
       var evals = loadTuteurEvals();
-      evals[login] = obj;
+      if (!evals[login]) evals[login] = {};
+      evals[login].criteres = obj;
+      // conserver les competences deja sauvegardees
+      if (!evals[login].competences) evals[login].competences = {};
       saveTuteurEvals(evals);
     }
     // compatibilite avec l'ancien stockage global
