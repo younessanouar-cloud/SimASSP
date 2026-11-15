@@ -1134,13 +1134,72 @@
     var prog = s.progression || STATE.progression;
     var comps = D.COMPETENCES;
     var name = s.name || (AUTH.currentUser ? (AUTH.currentUser.prenom + " " + AUTH.currentUser.nom) : "—");
-    w.document.write('<!DOCTYPE html><html><head><title>Bilan SimASSP</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#1e3a5f;color:#fff;}h1{color:#1e3a5f;}</style></head><body>' +
-      '<h1>Bilan de progression — SimASSP</h1>' +
-      '<p>Élève : ' + name + '</p>' +
-      '<p>Date : ' + new Date().toLocaleDateString("fr-FR") + '</p>' +
-      '<table><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>' +
-      comps.map(function (c) { return '<tr><td>' + c.id + ' — ' + c.titre + '</td><td>' + c.bloc + '</td><td>' + (prog[c.id] || 0) + '/3</td></tr>'; }).join("") +
-      '</tbody></table><script>window.print();</script></body></html>');
+    var tuteurEvals = loadTuteurEvals();
+    var te = tuteurEvals[login] || {};
+    var tuteurCriteres = (te.criteres !== undefined) ? te.criteres : (te.criteres_old || te);
+    if (tuteurCriteres === te && !te.criteres && !te.competences) {
+      var hasCritere = false;
+      D.CRITERES.forEach(function (cr) { if (te[cr.id] !== undefined) hasCritere = true; });
+      if (hasCritere) { tuteurCriteres = te; }
+    }
+    var tuteurCompetences = te.competences || {};
+    var css = 'body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;} h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:6px;} h2{color:#2e7d32;margin-top:18px;} table{width:100%;border-collapse:collapse;margin:8px 0;} th,td{border:1px solid #ccc;padding:6px;font-size:11px;} th{background:#1e3a5f;color:#fff;} .meta{font-size:12px;color:#555;margin:4px 0;} .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;} .ok{background:#e8f5e9;color:#2e7d32;} .warn{background:#fff3e0;color:#e65100;} .bad{background:#fce4ec;color:#c62828;}';
+    var html = '<!DOCTYPE html><html><head><title>Bilan SimASSP - ' + name + '</title><style>' + css + '</style></head><body>';
+    html += '<h1>Bilan de progression — SimASSP</h1>';
+    html += '<p class="meta">Élève : <strong>' + name + '</strong> · Identifiant : ' + (login || "—") + '</p>';
+    html += '<p class="meta">Date d\'export : ' + new Date().toLocaleDateString("fr-FR") + ' · Date d\'import : ' + (s.imported || "—") + '</p>';
+    // Section 1: Progression competences eleve
+    html += '<h2>1. Progression des compétences (élève)</h2>';
+    html += '<table><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau élève</th></tr></thead><tbody>';
+    comps.forEach(function (cp) {
+      html += '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td style="text-align:center;font-weight:700;">' + (prog[cp.id] || 0) + '/3</td></tr>';
+    });
+    html += '</tbody></table>';
+    // Section 2: Evaluation tuteur par competence
+    html += '<h2>2. Évaluation tuteur par compétence</h2>';
+    html += '<table><thead><tr><th>Compétence</th><th>Bloc</th><th>Élève</th><th>Tuteur</th><th>Écart</th></tr></thead><tbody>';
+    comps.forEach(function (cp) {
+      var el = prog[cp.id] || 0;
+      var tu = tuteurCompetences[cp.id];
+      var tuStr = (tu === undefined) ? "—" : tu;
+      var ecart = (tu === undefined) ? "—" : (el - tu);
+      var ecartStr = (tu === undefined) ? "—" : ((ecart > 0 ? '+' : '') + ecart);
+      var colorClass = (tu === undefined) ? "" : (ecart === 0 ? "ok" : (ecart > 0 ? "warn" : "bad"));
+      html += '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td style="text-align:center;">' + el + '/3</td><td style="text-align:center;">' + tuStr + (tu === undefined ? '' : '/3') + '</td><td style="text-align:center;font-weight:700;" class="' + colorClass + '">' + ecartStr + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    // Section 3: Evaluation tuteur par critere
+    html += '<h2>3. Évaluation tuteur par critère</h2>';
+    html += '<table><thead><tr><th>Critère</th><th>Niveau tuteur</th></tr></thead><tbody>';
+    D.CRITERES.forEach(function (cr) {
+      var val = tuteurCriteres[cr.id];
+      html += '<tr><td>' + cr.label + ' — ' + cr.question + '</td><td style="text-align:center;font-weight:700;">' + (val === undefined ? "—" : val + '/3') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    // Section 4: Autoevaluation eleve
+    var autoeval = s.autoeval || {};
+    html += '<h2>4. Autoévaluation de l\'élève</h2>';
+    html += '<table><thead><tr><th>Critère</th><th>Niveau élève</th></tr></thead><tbody>';
+    D.CRITERES.forEach(function (cr) {
+      var val = autoeval[cr.id];
+      html += '<tr><td>' + cr.label + '</td><td style="text-align:center;font-weight:700;">' + (val === undefined ? "—" : val + '/3') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    // Section 5: Historique scenarios
+    var hist = s.history || [];
+    html += '<h2>5. Scénarios réalisés (' + hist.length + ')</h2>';
+    if (hist.length === 0) {
+      html += '<p class="meta">Aucun scénario réalisé.</p>';
+    } else {
+      html += '<table><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>';
+      hist.forEach(function (h) {
+        html += '<tr><td>' + h.date + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '<script>window.print();</script></body></html>';
+    w.document.write(html);
+    w.document.close();
     w.document.close();
   };
 
