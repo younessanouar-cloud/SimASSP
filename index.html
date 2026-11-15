@@ -364,6 +364,15 @@
     })();
   </script>
   <script src="js/data.js"></script>
+  <script src="js/scenarios_extra.js"></script>
+  <script>
+    // Fusion des scénarios supplémentaires
+    (function () {
+      if (window.SIM_DATA && window.SIM_SCENARIOS_EXTRA) {
+        window.SIM_DATA.SCENARIOS = window.SIM_DATA.SCENARIOS.concat(window.SIM_SCENARIOS_EXTRA);
+      }
+    })();
+  </script>
   <script src="js/app.js"></script>
 </body>
 </html>
