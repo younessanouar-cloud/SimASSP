@@ -759,6 +759,7 @@
     else if (tab === "scenarios") renderScenariosTab(c);
     else if (tab === "bilans") renderBilansTab(c);
   }
+  window.renderTeacherTab = renderTeacherTab;
 
   function renderComptesTab(c) {
     var accounts = AUTH.accounts.slice().sort(function (a, b) { return a.nom.localeCompare(b.nom); });
