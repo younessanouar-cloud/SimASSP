@@ -309,23 +309,43 @@
   </footer>
 
   <script>
-    // Fallback robuste : cacher le loader si le JS ne s'exécute pas
+    // Fallback robuste : cacher le loader si le JS ne s'exécute pas + afficher les erreurs
     (function () {
       var done = false;
+      function showError(msg) {
+        try {
+          var b = document.getElementById('errorBanner');
+          if (!b) {
+            b = document.createElement('div');
+            b.id = 'errorBanner';
+            b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c62828;color:#fff;padding:12px 16px;font-family:system-ui,sans-serif;font-size:13px;white-space:pre-wrap;max-height:40vh;overflow:auto;';
+            document.body.appendChild(b);
+          }
+          b.textContent = '⚠ Erreur SimASSP : ' + msg;
+        } catch (e) {}
+      }
       function hideLoader() {
         if (done) return;
         done = true;
         var l = document.getElementById('loader');
         if (l) { l.classList.add('loader--hidden'); l.style.display = 'none'; }
-        // afficher la vue login si aucune vue active
         if (!document.querySelector('.view--active')) {
           var login = document.getElementById('view-login');
           if (login) login.classList.add('view--active');
           document.body.classList.add('login-mode');
         }
       }
-      setTimeout(hideLoader, 2000);
-      window.addEventListener('load', function () { setTimeout(hideLoader, 100); });
+      setTimeout(hideLoader, 1500);
+      window.addEventListener('DOMContentLoaded', function () { setTimeout(hideLoader, 50); });
+      window.addEventListener('load', function () { setTimeout(hideLoader, 50); });
+      window.addEventListener('error', function (e) {
+        hideLoader();
+        showError((e && e.message ? e.message : 'erreur inconnue') + (e && e.filename ? ' (' + e.filename + ':' + e.lineno + ')' : ''));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        hideLoader();
+        showError('Promise rejetée : ' + (e && e.reason ? (e.reason.message || e.reason) : 'inconnue'));
+      });
     })();
   </script>
   <script src="js/data.js"></script>
