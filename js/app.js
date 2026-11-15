@@ -673,7 +673,11 @@
       '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
   }
   window.exportData = function () {
-    var data = { progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory() };
+    var u = AUTH.currentUser;
+    var data = {
+      student: { login: u ? u.login : "anon", name: u ? (u.prenom + " " + u.nom) : "Anonyme", niveau: u ? u.niveau : "", classe: u ? u.classe : "" },
+      progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory()
+    };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a"); a.href = url; a.download = "simassp_export.json"; a.click();
@@ -901,6 +905,13 @@
         '</tbody></table>');
   }
 
+  function loadStudentsData() {
+    try { return JSON.parse(localStorage.getItem("simassp_students_data") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function saveStudentsData(obj) {
+    localStorage.setItem("simassp_students_data", JSON.stringify(obj));
+  }
   window.importEleveData = function () {
     var input = document.createElement("input");
     input.type = "file"; input.accept = "application/json";
@@ -911,6 +922,25 @@
       reader.onload = function (ev) {
         try {
           var data = JSON.parse(ev.target.result);
+          var login = (data.student && data.student.login) ? data.student.login : ("eleve_" + Date.now());
+          var name = (data.student && data.student.name) ? data.student.name : login;
+          var students = loadStudentsData();
+          if (!students[login]) students[login] = { name: name, progression: {}, autoeval: {}, history: [], imported: new Date().toLocaleString("fr-FR") };
+          if (data.progression) {
+            Object.keys(data.progression).forEach(function (k) {
+              var cur = students[login].progression[k] || 0;
+              students[login].progression[k] = Math.max(cur, data.progression[k]);
+            });
+          }
+          if (data.autoeval) {
+            students[login].autoeval = Object.assign({}, students[login].autoeval || {}, data.autoeval);
+          }
+          if (data.history) {
+            students[login].history = (students[login].history || []).concat(data.history).slice(0, 100);
+          }
+          students[login].imported = new Date().toLocaleString("fr-FR");
+          saveStudentsData(students);
+          // aussi fusionner dans la progression courante pour compatibilite
           if (data.progression) {
             Object.keys(data.progression).forEach(function (k) {
               var cur = STATE.progression[k] || 0;
@@ -918,18 +948,9 @@
             });
             saveProgression();
           }
-          if (data.history) {
-            var hist = loadHistory();
-            var merged = data.history.concat(hist).slice(0, 100);
-            saveHistory(merged);
-          }
-          if (data.autoeval) {
-            var cur2 = loadAutoeval();
-            STATE.autoeval = Object.assign({}, cur2, data.autoeval);
-            saveAutoeval();
-          }
-          toast("Données élève importées ✅");
+          toast("Données élève importées ✅ (" + name + ")");
           renderTeacherTab("suivi");
+          renderTeacherTab("bilans");
         } catch (err) { toast("Fichier invalide ❌"); }
       };
       reader.readAsText(file);
@@ -950,8 +971,19 @@
     var comps = D.COMPETENCES;
     var tuteurSaved = {};
     try { tuteurSaved = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}"); } catch (e) {}
+    var u = AUTH.currentUser;
+    var studentName = u ? (u.prenom + " " + u.nom) : "Élève connecté";
+    var students = loadStudentsData();
+    var studentRows = Object.keys(students).map(function (login) {
+      var s = students[login];
+      var sprog = s.progression || {};
+      var vals = Object.keys(sprog).map(function (k) { return sprog[k]; });
+      var avg = vals.length ? (vals.reduce(function (a, b) { return a + b; }, 0) / comps.length).toFixed(1) : "0.0";
+      var done = comps.filter(function (cp) { return (sprog[cp.id] || 0) >= 2; }).length;
+      return '<tr><td>' + (s.name || login) + '</td><td>' + login + '</td><td>' + done + '/' + comps.length + '</td><td>' + avg + '/3</td><td style="font-size:.75rem;">' + (s.imported || "—") + '</td></tr>';
+    }).join("");
     c.innerHTML = '<h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>' +
-      '<p class="muted">Niveaux par compétence (données de l\'élève connecté). Saisir l\'évaluation tuteur :</p>' +
+      '<p class="muted">Élève affiché : <strong>' + studentName + '</strong>. Importe les exports JSON des élèves pour les suivre ici.</p>' +
       '<div class="card" style="margin-bottom:16px;"><h4 style="color:var(--c-primary);margin:0 0 8px;">👩‍🏫 Évaluation tuteur (par critère)</h4>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
       D.CRITERES.map(function (cr) {
@@ -959,9 +991,13 @@
           [0, 1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (tuteurSaved[cr.id] === n ? ' selected' : '') + '>' + n + '</option>'; }).join("") + '</select></label>';
       }).join("") + '</div>' +
       '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">💾 Enregistrer éval. tuteur</button></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📊 Progression de ' + studentName + '</h4>' +
       '<table class="table"><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>' +
-      comps.map(function (c) { return '<tr><td>' + c.id + ' — ' + c.titre + '</td><td>' + c.bloc + '</td><td>' + (prog[c.id] || 0) + '/3</td></tr>'; }).join("") +
+      comps.map(function (cp) { return '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td>' + (prog[cp.id] || 0) + '/3</td></tr>'; }).join("") +
       '</tbody></table>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">👥 Suivi des élèves importés (' + Object.keys(students).length + ')</h4>' +
+      (Object.keys(students).length === 0 ? '<p class="muted">Aucun élève importé. Utilise "📥 Importer données élève" dans l\'onglet Suivi.</p>' :
+        '<table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
       '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">📄 Exporter bilan PDF</button></div>';
   }
 
