@@ -308,6 +308,26 @@
     <p>SimASSP — Compagnon de progression professionnelle pour Bac Pro ASSP · Données locales (RGPD) · Créé par Mr ANOUAR</p>
   </footer>
 
+  <script>
+    // Fallback robuste : cacher le loader si le JS ne s'exécute pas
+    (function () {
+      var done = false;
+      function hideLoader() {
+        if (done) return;
+        done = true;
+        var l = document.getElementById('loader');
+        if (l) { l.classList.add('loader--hidden'); l.style.display = 'none'; }
+        // afficher la vue login si aucune vue active
+        if (!document.querySelector('.view--active')) {
+          var login = document.getElementById('view-login');
+          if (login) login.classList.add('view--active');
+          document.body.classList.add('login-mode');
+        }
+      }
+      setTimeout(hideLoader, 2000);
+      window.addEventListener('load', function () { setTimeout(hideLoader, 100); });
+    })();
+  </script>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>
