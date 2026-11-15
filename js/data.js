@@ -244,6 +244,135 @@ window.SIM_DATA = (function () {
           ], hint: "Quantité + incidents + comportement = transmission utile." }
       ],
       bilan: "Tu as mobilisé : protocole repas, sécurité alimentaire, observation, transmission. Points forts : respect du protocole. À retravailler : réaction face à un incident (toux)."
+    },
+    {
+      id: "S7", bloc: "B1", annee: "T", contexte: "structure", duree: "15 min",
+      titre: "Projet individualisé — M. A. veut rentrer chez lui",
+      description: "M. A., 82 ans, en EHPAD depuis 3 mois, exprime le souhait de rentrer chez lui. Tu participes à la réunion d'équipe.",
+      steps: [
+        { q: "Comment recueilles-tu les éléments pour comprendre sa demande ?",
+          choices: [
+            { text: "Entretien individuel, écoute des souhaits, des craintes, des habitudes antérieures, observation de son autonomie.", correct: true, feedback: "✅ Tu recueilles des informations complètes et respectueuses pour nourrir le projet.", next: 1 },
+            { text: "Lui dire que c'est impossible et passer à autre chose.", correct: false, feedback: "❌ Tu fermes la discussion et tu ignores ses souhaits. Cela nuirait à la relation et au projet.", next: 1 },
+            { text: "Décider seul de ce qui est le mieux pour lui.", correct: false, feedback: "❌ Tu usurpes le rôle de l'équipe et tu ne respectes pas son autonomie.", next: 1 }
+          ], hint: "Le projet individualisé part des souhaits de la personne." },
+        { q: "En réunion, que proposes-tu ?",
+          choices: [
+            { text: "Proposer une évaluation de l'autonomie à domicile, un essai de retour, un accompagnement renforcé.", correct: true, feedback: "✅ Tu proposes une démarche progressive et sécurisée, en équipe.", next: 2 },
+            { text: "Demander un transfert immédiat sans évaluation.", correct: false, feedback: "❌ Risque de mise en danger. Il faut évaluer avant d'agir.", next: 2 }
+          ], hint: "Le projet se construit avec l'équipe et la personne." },
+        { q: "M. A. est déçu car le projet prend du temps. Que fais-tu ?",
+          choices: [
+            { text: "L'écouter, expliquer les étapes, le rassurer, maintenir le lien et transmettre ses ressentis.", correct: true, feedback: "✅ Tu accompagnes émotionnellement et tu maintiens la relation de confiance.", next: 3 },
+            { text: "Lui dire de patienter sans explication.", correct: false, feedback: "❌ Tu ignores sa frustration. Le lien thérapeutique s'affaiblit.", next: 3 }
+          ], hint: "L'accompagnement inclut la dimension émotionnelle." }
+      ],
+      bilan: "Tu as mobilisé : recueil, projet individualisé, travail en équipe, accompagnement émotionnel. Points forts : écoute. À retravailler : coordination avec l'équipe et temporalité du projet."
+    },
+    {
+      id: "S8", bloc: "B2", annee: "T", contexte: "structure", duree: "12 min",
+      titre: "Mobilisation et prévention des chutes",
+      description: "M. T., 78 ans, a des troubles de l'équilibre. Tu dois l'aider à se lever du fauteuil pour aller aux toilettes.",
+      steps: [
+        { q: "Avant de l'aider à se lever, que fais-tu ?",
+          choices: [
+            { text: "Vérifier l'environnement (sol sec, obstacle), expliquer le geste, mettre les chaussures, utiliser l'aide technique.", correct: true, feedback: "✅ Tu prépares la sécurité de la personne et de toi-même.", next: 1 },
+            { text: "Le lever rapidement sans préparation.", correct: false, feedback: "❌ Risque de chute pour lui et de blessure pour toi.", next: 1 },
+            { text: "Lui dire d'attendre qu'un collègue soit disponible sans agir.", correct: false, feedback: "❌ Tu retardes une besoin et tu ne proposes pas de solution sécurisée.", next: 1 }
+          ], hint: "Sécurité = environnement + explication + équipement." },
+        { q: "Pendant le transfert, M. T. vacille. Que fais-tu ?",
+          choices: [
+            { text: "Le stabiliser contre toi, le rassurer, le ramener au fauteuil, réévaluer.", correct: true, feedback: "✅ Tu réagis avec calme et sécurité.", next: 2 },
+            { text: "Le laisser se rattraper seul.", correct: false, feedback: "❌ Risque de chute grave. Tu dois intervenir immédiatement.", next: 2 },
+            { text: "Le forcer à continuer.", correct: false, feedback: "❌ Tu ignores le risque. Arrête et réévalue.", next: 2 }
+          ], hint: "En cas de vacillement, sécuriser d'abord." },
+        { q: "Après l'épisode, que transmets-tu ?",
+          choices: [
+            { text: "Vacillement observé, circonstances, actions, recommandation de réévaluation de la mobilisation et de l'aide technique.", correct: true, feedback: "✅ Transmission complète pour la prévention des chutes.", next: 3 },
+            { text: "« Il a failli tomber. »", correct: false, feedback: "❌ Trop vague pour mettre en place une prévention efficace.", next: 3 }
+          ], hint: "La prévention des chutes repose sur des observations précises." }
+      ],
+      bilan: "Tu as mobilisé : prévention des chutes, mobilisation sécurisée, observation, transmission. Points forts : sécurité. À retravailler : utilisation des aides techniques et traçabilité."
+    },
+    {
+      id: "S9", bloc: "B3", annee: "2", contexte: "structure", duree: "10 min",
+      titre: "Bionettoyage et prévention des infections",
+      description: "Tu dois réaliser le bionettoyage de la chambre d'un résident porteur d'une infection.",
+      steps: [
+        { q: "Quelle est ta première action ?",
+          choices: [
+            { text: "Lire le protocole, mettre les EPI adaptés, préparer le matériel dédié.", correct: true, feedback: "✅ Tu respectes le protocole et tu te protèges.", next: 1 },
+            { text: "Commencer le nettoyage sans EPI pour gagner du temps.", correct: false, feedback: "❌ Risque de contamination pour toi et l'environnement.", next: 1 },
+            { text: "Demander à un collègue de le faire à ta place.", correct: false, feedback: "❌ Tu dois réaliser le geste dans ton champ, avec les protections adaptées.", next: 1 }
+          ], hint: "Le bionettoyage suit un protocole précis." },
+        { q: "Tu termines le nettoyage. Que fais-tu ?",
+          choices: [
+            { text: "Désinfecter le matériel, retirer les EPI dans l'ordre, se laver les mains, tracer l'action.", correct: true, feedback: "✅ Tu respectes la chaîne de prévention des infections.", next: 2 },
+            { text: "Retirer les gants et sortir sans se laver les mains.", correct: false, feedback: "❌ Risque de contamination croisée. Le lavage des mains est indispensable.", next: 2 }
+          ], hint: "Le retrait des EPI et le lavage des mains sont des étapes clés." }
+      ],
+      bilan: "Tu as mobilisé : protocole d'hygiène, prévention des infections, traçabilité. Points forts : respect du protocole. À retravailler : rigueur dans le retrait des EPI."
+    },
+    {
+      id: "S10", bloc: "B4", annee: "1", contexte: "centre", duree: "15 min",
+      titre: "Sensibiliser à l'hygiène des mains",
+      description: "Tu dois animer une courte sensibilisation à l'hygiène des mains pour un groupe de résidents.",
+      steps: [
+        { q: "Comment prépares-tu l'animation ?",
+          choices: [
+            { text: "Définir l'objectif, adapter le contenu au public, prévoir du matériel simple et une démonstration.", correct: true, feedback: "✅ Tu prépares une animation adaptée et concrète.", next: 1 },
+            { text: "Improviser sans préparation.", correct: false, feedback: "❌ Risque d'action peu efficace et mal adaptée.", next: 1 }
+          ], hint: "L'éducation à la santé se prépare." },
+        { q: "Pendant l'animation, un résident ne comprend pas. Que fais-tu ?",
+          choices: [
+            { text: "Reformuler, utiliser un exemple concret, vérifier la compréhension.", correct: true, feedback: "✅ Tu adaptes et tu vérifies la compréhension.", next: 2 },
+            { text: "Continuer sans tenir compte de sa difficulté.", correct: false, feedback: "❌ Tu perds un participant. Adapte ton message.", next: 2 }
+          ], hint: "Vérifier la compréhension est essentiel." },
+        { q: "Comment évalues-tu l'action ?",
+          choices: [
+            { text: "Observation des gestes réalisés, retour des participants, ajustement de l'animation.", correct: true, feedback: "✅ Évaluation par observation et retour.", next: 3 },
+            { text: "Ne pas évaluer.", correct: false, feedback: "❌ Tu ne peux pas améliorer l'action sans évaluation.", next: 3 }
+          ], hint: "Évaluer pour améliorer." }
+      ],
+      bilan: "Tu as mobilisé : conception, animation, adaptation, évaluation. Points forts : préparation. À retravailler : évaluation par indicateurs."
+    },
+    {
+      id: "S11", bloc: "B1", annee: "2", contexte: "centre", duree: "12 min",
+      titre: "Communication avec la famille",
+      description: "La fille de Mme B. est inquiète et te pose des questions sur l'état de sa mère.",
+      steps: [
+        { q: "Comment réponds-tu ?",
+          choices: [
+            { text: "Écouter ses inquiétudes, rassurer avec des faits, respecter la confidentialité, orienter vers l'infirmier si besoin.", correct: true, feedback: "✅ Tu communiques avec empathie et professionnalisme.", next: 1 },
+            { text: "Donner des informations médicales détaillées sans vérification.", correct: false, feedback: "❌ Risque de dépasser ton champ et de violer la confidentialité.", next: 1 },
+            { text: "Lui dire que ce n'est pas ton rôle et l'ignorer.", correct: false, feedback: "❌ Tu manques d'empathie et de posture professionnelle.", next: 1 }
+          ], hint: "Écoute, empathie, limites professionnelles." },
+        { q: "La fille demande à voir le dossier médical. Que fais-tu ?",
+          choices: [
+            { text: "Expliquer que le dossier est confidentiel et orienter vers l'infirmier/médecin.", correct: true, feedback: "✅ Tu respectes la confidentialité et tu orientes correctement.", next: 2 },
+            { text: "Lui montrer le dossier.", correct: false, feedback: "❌ Violation de la confidentialité. Le dossier est réservé aux professionnels.", next: 2 }
+          ], hint: "La confidentialité est un devoir professionnel." }
+      ],
+      bilan: "Tu as mobilisé : communication, empathie, confidentialité, limites professionnelles. Points forts : écoute. À retravailler : orientation vers les professionnels compétents."
+    },
+    {
+      id: "S12", bloc: "B2", annee: "2", contexte: "structure", duree: "10 min",
+      titre: "Prise de constantes",
+      description: "Tu dois prendre la tension et la température de M. C. avant la visite médicale.",
+      steps: [
+        { q: "Comment procèdes-tu ?",
+          choices: [
+            { text: "Expliquer le geste, installer confortablement, utiliser le matériel propre, noter les valeurs.", correct: true, feedback: "✅ Geste professionnel respectueux et rigoureux.", next: 1 },
+            { text: "Prendre les constantes sans expliquer.", correct: false, feedback: "❌ Tu négliges la communication et le consentement.", next: 1 }
+          ], hint: "Expliquer + installer + hygiène + notation." },
+        { q: "La tension est élevée (16/9). Que fais-tu ?",
+          choices: [
+            { text: "Noter, ne pas alarmer la personne, transmettre à l'infirmier/médecin.", correct: true, feedback: "✅ Tu gères avec calme et tu transmets correctement.", next: 2 },
+            { text: "Lui dire qu'il a un grave problème.", correct: false, feedback: "❌ Tu alarmes inutilement. Transmets à la personne compétente.", next: 2 },
+            { text: "Ne rien dire et ne rien noter.", correct: false, feedback: "❌ Tu omets une information importante pour le suivi médical.", next: 2 }
+          ], hint: "Transmettre sans alarmer." }
+      ],
+      bilan: "Tu as mobilisé : prise de constantes, communication, transmission. Points forts : rigueur. À retravailler : gestion de l'annonce des résultats."
     }
   ];
 

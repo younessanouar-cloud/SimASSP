@@ -504,6 +504,7 @@
 
   // ---------- INIT ----------
   function init() {
+    window.showView = showView;
     renderAccueil();
     // hide loader
     setTimeout(() => document.getElementById("loader").classList.add("loader--hidden"), 600);
