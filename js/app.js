@@ -36,20 +36,17 @@
       if (!acc) return false;
       if (acc.passwordHash !== AUTH.hash(pwd)) return false;
       AUTH.currentUser = acc;
-      try { sessionStorage.setItem("simassp_session", acc.id); } catch (e) {}
+      // Pas de restauration automatique : on ne persiste pas la session.
+      try { sessionStorage.removeItem("simassp_session"); } catch (e) {}
       return true;
     },
     logout: function () {
       AUTH.currentUser = null;
       try { sessionStorage.removeItem("simassp_session"); } catch (e) {}
+      try { localStorage.removeItem("simassp_session"); } catch (e) {}
     },
     restoreSession: function () {
-      var id = null;
-      try { id = sessionStorage.getItem("simassp_session"); } catch (e) { return false; }
-      if (!id) return false;
-      for (var i = 0; i < AUTH.accounts.length; i++) {
-        if (AUTH.accounts[i].id === id) { AUTH.currentUser = AUTH.accounts[i]; return true; }
-      }
+      // Desactive : on demande toujours l'identifiant et le mot de passe.
       return false;
     },
     createAccount: function (prenom, nom, niveau, classe) {
