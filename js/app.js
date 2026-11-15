@@ -220,7 +220,7 @@
   var views = ["login", "accueil", "parcours", "scenarios", "autoeval", "dashboard", "matheo", "enseignant"];
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
-    if (name !== "login" && name !== "enseignant" && !AUTH.currentUser) { name = "login"; }
+    if (name !== "login" && name !== "enseignant" && !AUTH.currentUser && !TEACHER_AUTH.currentUser) { name = "login"; }
     // L'espace enseignant est un espace distinct : on deconnecte l'eleve pour y entrer.
     if (name === "enseignant" && AUTH.currentUser && !TEACHER_AUTH.currentUser) {
       AUTH.logout();
