@@ -37,6 +37,10 @@
         <span class="brand__name">SimASSP</span>
         <span class="brand__tag">Bac Pro ASSP</span>
       </a>
+      <div class="user-badge" id="userBadge" hidden>
+        <span id="userName">—</span>
+        <button class="btn btn--sm btn--ghost" onclick="logout()" style="color:var(--c-text);">🚪 Déconnexion</button>
+      </div>
       <nav class="nav">
         <button class="nav__btn" data-nav="accueil">🏠 Accueil</button>
         <button class="nav__btn" data-nav="parcours">🗺️ Parcours</button>
@@ -52,6 +56,43 @@
 
   <!-- ============ MAIN ============ -->
   <main id="app">
+
+    <!-- ---------- LOGIN ---------- -->
+    <section id="view-login" class="view">
+      <div class="login">
+        <div class="login__card">
+          <div class="login__logo">
+            <svg viewBox="0 0 40 40" width="64" height="64" aria-hidden="true">
+              <defs>
+                <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#1e3a5f"/>
+                  <stop offset="1" stop-color="#2e7d32"/>
+                </linearGradient>
+              </defs>
+              <circle cx="20" cy="20" r="18" fill="url(#lg)"/>
+              <path d="M12 22 L20 12 L28 22 Z" fill="#fff" opacity=".9"/>
+              <circle cx="20" cy="26" r="3" fill="#f9a825"/>
+            </svg>
+          </div>
+          <h1 class="login__title">SimASSP</h1>
+          <p class="login__sub">Connecte-toi pour suivre ta progression sur les 3 années</p>
+          <div class="login__form">
+            <label>Identifiant
+              <input type="text" id="loginUser" class="input" placeholder="ex: eleve.martin" autocomplete="username" />
+            </label>
+            <label>Mot de passe
+              <input type="password" id="loginPwd" class="input" placeholder="••••••••" autocomplete="current-password" />
+            </label>
+            <button class="btn btn--primary btn--lg" style="width:100%;justify-content:center;" onclick="doLogin()">Se connecter</button>
+            <p class="error-msg" id="loginError"></p>
+          </div>
+          <div class="login__help">
+            <p class="muted" style="font-size:.8rem;">Pas d'identifiant ? Demande à ton enseignant de te créer un compte.</p>
+            <p class="muted" style="font-size:.8rem;">Enseignant ? <button class="btn btn--sm btn--ghost" onclick="showView('enseignant')" style="color:var(--c-primary);">Accès enseignant</button></p>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- ---------- ACCUEIL ---------- -->
     <section id="view-accueil" class="view view--active">
@@ -238,7 +279,8 @@
       </div>
       <div class="teacher-panel" id="teacherPanel" hidden>
         <div class="tabs">
-          <button class="tab tab--active" data-tab="suivi">👥 Suivi élèves</button>
+          <button class="tab tab--active" data-tab="comptes">👥 Comptes</button>
+          <button class="tab" data-tab="suivi">📊 Suivi</button>
           <button class="tab" data-tab="scenarios">🎬 Scénarios</button>
           <button class="tab" data-tab="bilans">📈 Bilans</button>
         </div>

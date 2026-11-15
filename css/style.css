@@ -33,7 +33,24 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- Loader ---------- */
+/* ---------- Login ---------- */
+.login { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
+.login__card {
+  background: var(--c-card); border-radius: 24px; padding: 40px 32px;
+  box-shadow: var(--shadow-lg); max-width: 420px; width: 100%; text-align: center;
+}
+.login__logo { margin-bottom: 14px; }
+.login__title { font-size: 2rem; font-weight: 800; color: var(--c-primary); margin: 0 0 4px; }
+.login__sub { color: var(--c-muted); margin: 0 0 24px; font-size: .9rem; }
+.login__form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.login__form label { display: flex; flex-direction: column; font-size: .85rem; font-weight: 600; color: var(--c-muted); gap: 4px; }
+.login__help { margin-top: 18px; border-top: 1px solid var(--c-border); padding-top: 14px; }
+.user-badge {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  font-size: .85rem; font-weight: 600; color: var(--c-primary);
+}
+body.login-mode .nav { display: none !important; }
+body.login-mode .user-badge { display: none !important; }
 .loader {
   position: fixed; inset: 0; z-index: 9999;
   background: linear-gradient(135deg, #1e3a5f, #2e7d32);
