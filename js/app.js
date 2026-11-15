@@ -89,6 +89,81 @@
   // charger les comptes
   AUTH.accounts = AUTH.loadAccounts();
 
+  // ---------- COMPTES ENSEIGNANTS / TUTEURS ----------
+  var TEACHER_AUTH = {
+    currentUser: null,
+    accounts: [],
+    hash: AUTH.hash,
+    loadAccounts: function () {
+      try { return JSON.parse(localStorage.getItem("simassp_teachers") || "[]"); }
+      catch (e) { return []; }
+    },
+    saveAccounts: function () {
+      localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts));
+    },
+    genPassword: AUTH.genPassword,
+    genLogin: function (prenom, nom) {
+      var base = (prenom.charAt(0) + nom).toLowerCase().replace(/[^a-z]/g, "");
+      if (!base) base = "enseignant";
+      return base;
+    },
+    login: function (login, pwd) {
+      var acc = null;
+      for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
+        if (TEACHER_AUTH.accounts[i].login === login) { acc = TEACHER_AUTH.accounts[i]; break; }
+      }
+      if (!acc) return false;
+      if (acc.passwordHash !== TEACHER_AUTH.hash(pwd)) return false;
+      TEACHER_AUTH.currentUser = acc;
+      return true;
+    },
+    logout: function () { TEACHER_AUTH.currentUser = null; },
+    createAccount: function (prenom, nom, role) {
+      var login = TEACHER_AUTH.genLogin(prenom, nom);
+      var finalLogin = login;
+      var i = 2;
+      while (TEACHER_AUTH.accounts.some(function (a) { return a.login === finalLogin; })) { finalLogin = login + i++; }
+      var pwd = TEACHER_AUTH.genPassword();
+      var acc = {
+        id: "t_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+        login: finalLogin,
+        passwordHash: TEACHER_AUTH.hash(pwd),
+        prenom: prenom, nom: nom, role: role || "enseignant",
+        created: new Date().toLocaleString("fr-FR")
+      };
+      TEACHER_AUTH.accounts.push(acc);
+      TEACHER_AUTH.saveAccounts();
+      return { account: acc, password: pwd };
+    },
+    resetPassword: function (id) {
+      var acc = null;
+      for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
+        if (TEACHER_AUTH.accounts[i].id === id) { acc = TEACHER_AUTH.accounts[i]; break; }
+      }
+      if (!acc) return null;
+      var pwd = TEACHER_AUTH.genPassword();
+      acc.passwordHash = TEACHER_AUTH.hash(pwd);
+      TEACHER_AUTH.saveAccounts();
+      return pwd;
+    },
+    deleteAccount: function (id) {
+      TEACHER_AUTH.accounts = TEACHER_AUTH.accounts.filter(function (a) { return a.id !== id; });
+      TEACHER_AUTH.saveAccounts();
+    }
+  };
+  TEACHER_AUTH.accounts = TEACHER_AUTH.loadAccounts();
+  // compte par defaut
+  if (TEACHER_AUTH.accounts.length === 0) {
+    TEACHER_AUTH.accounts.push({
+      id: "t_default",
+      login: "enseignant",
+      passwordHash: TEACHER_AUTH.hash("ecbg2026"),
+      prenom: "Enseignant", nom: "", role: "enseignant",
+      created: new Date().toLocaleString("fr-FR")
+    });
+    TEACHER_AUTH.saveAccounts();
+  }
+
   // ---------- STORAGE PAR UTILISATEUR ----------
   function userKey(base) {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
@@ -147,7 +222,7 @@
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser) { name = "login"; }
     // L'espace enseignant est un espace distinct : on deconnecte l'eleve pour y entrer.
-    if (name === "enseignant" && AUTH.currentUser && !STATE.teacherAuth) {
+    if (name === "enseignant" && AUTH.currentUser && !TEACHER_AUTH.currentUser) {
       AUTH.logout();
       STATE.progression = {};
       STATE.autoeval = {};
@@ -205,6 +280,11 @@
   function renderLogin() {
     var err = document.getElementById("loginError");
     if (err) err.textContent = "";
+    var img = document.getElementById("loginQrImg");
+    if (img) {
+      var url = window.location.href.split("?")[0].split("#")[0];
+      img.src = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" + encodeURIComponent(url);
+    }
   }
   window.doLogin = function () {
     var login = document.getElementById("loginUser").value.trim();
@@ -603,7 +683,7 @@
 
   // ---------- ENSEIGNANT ----------
   function renderTeacher() {
-    if (!STATE.teacherAuth) {
+    if (!TEACHER_AUTH.currentUser) {
       var gate = document.getElementById("teacherGate");
       var panel = document.getElementById("teacherPanel");
       if (gate) gate.hidden = false;
@@ -618,15 +698,21 @@
   }
   var teacherLoginBtn = document.getElementById("teacherLoginBtn");
   if (teacherLoginBtn) teacherLoginBtn.addEventListener("click", function () {
+    var login = document.getElementById("teacherUser").value.trim();
     var pwd = document.getElementById("teacherPwd").value;
-    if (pwd === "ecbg2026") {
+    if (TEACHER_AUTH.login(login, pwd)) {
       STATE.teacherAuth = true;
       var err = document.getElementById("teacherError");
       if (err) err.textContent = "";
       renderTeacher();
     } else {
       var err2 = document.getElementById("teacherError");
-      if (err2) err2.textContent = "Mot de passe incorrect.";
+      if (err2) err2.textContent = "Identifiant ou mot de passe incorrect.";
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && document.getElementById("teacherGate") && !document.getElementById("teacherGate").hidden) {
+      if (teacherLoginBtn) teacherLoginBtn.click();
     }
   });
   var tabs = document.querySelectorAll(".tab");
@@ -645,6 +731,7 @@
     var c = document.getElementById("teacherTabContent");
     if (!c) return;
     if (tab === "comptes") renderComptesTab(c);
+    else if (tab === "enseignants") renderEnseignantsTab(c);
     else if (tab === "suivi") renderSuiviTab(c);
     else if (tab === "scenarios") renderScenariosTab(c);
     else if (tab === "bilans") renderBilansTab(c);
@@ -747,6 +834,60 @@
       reader.readAsText(file);
     };
     input.click();
+  };
+
+  function renderEnseignantsTab(c) {
+    var accounts = TEACHER_AUTH.accounts.slice().sort(function (a, b) { return (a.nom || "").localeCompare(b.nom || ""); });
+    c.innerHTML = '<h3 style="color:var(--c-primary);">👩‍🏫 Gestion des comptes enseignants / tuteurs</h3>' +
+      '<p class="muted">Crée, réinitialise ou supprime les comptes enseignants et tuteurs.</p>' +
+      '<div class="card" style="margin-bottom:16px;">' +
+      '<h4 style="color:var(--c-primary);margin:0 0 10px;">➕ Créer un compte</h4>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+      '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Prénom<input type="text" id="newTeacherPrenom" class="input" placeholder="Prénom" /></label>' +
+      '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Nom<input type="text" id="newTeacherNom" class="input" placeholder="Nom" /></label>' +
+      '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Rôle<select id="newTeacherRole" class="input"><option value="enseignant">Enseignant</option><option value="tuteur">Tuteur</option></select></label>' +
+      '</div>' +
+      '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="createTeacherAccount()">Créer le compte</button>' +
+      '<div id="newTeacherResult" style="margin-top:10px;"></div></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📋 Comptes existants (' + accounts.length + ')</h4>' +
+      (accounts.length === 0 ? '<p class="muted">Aucun compte.</p>' :
+        '<table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
+        accounts.map(function (a) {
+          return '<tr><td><code>' + a.login + '</code></td><td>' + a.prenom + ' ' + a.nom + '</td><td>' + a.role + '</td><td style="font-size:.75rem;">' + a.created + '</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-border);" onclick="resetTeacherPwd(\'' + a.id + '\')">🔄 Reset mdp</button>' +
+            (a.id !== "t_default" ? '<button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="deleteTeacherAccount(\'' + a.id + '\')">🗑️</button>' : '') +
+            '</td></tr>';
+        }).join("") + '</tbody></table>');
+  }
+  window.createTeacherAccount = function () {
+    var prenom = document.getElementById("newTeacherPrenom").value.trim();
+    var nom = document.getElementById("newTeacherNom").value.trim();
+    var role = document.getElementById("newTeacherRole").value;
+    if (!prenom || !nom) { toast("Prénom et nom requis."); return; }
+    var res = TEACHER_AUTH.createAccount(prenom, nom, role);
+    document.getElementById("newTeacherPrenom").value = "";
+    document.getElementById("newTeacherNom").value = "";
+    renderTeacherTab("enseignants");
+    var r = document.getElementById("newTeacherResult");
+    if (r) r.innerHTML = '<div class="feedback feedback--good"><strong>✅ Compte créé</strong><br>Identifiant : <code>' + res.account.login + '</code><br>Mot de passe : <code>' + res.password + '</code><br><span class="muted" style="font-size:.75rem;">Note ce mot de passe, il ne sera plus affiché.</span></div>';
+  };
+  window.resetTeacherPwd = function (id) {
+    if (!confirm("Réinitialiser le mot de passe de ce compte ?")) return;
+    var pwd = TEACHER_AUTH.resetPassword(id);
+    if (pwd) {
+      openModal('<h3 style="color:var(--c-primary);">🔄 Mot de passe réinitialisé</h3><p>Nouveau mot de passe : <code style="font-size:1.1rem;background:#f1f5f9;padding:4px 8px;border-radius:6px;">' + pwd + '</code></p><p class="muted" style="font-size:.8rem;">Note ce mot de passe, il ne sera plus affiché.</p><button class="btn btn--primary" onclick="closeModal()">OK</button>');
+    }
+  };
+  window.deleteTeacherAccount = function (id) {
+    if (!confirm("Supprimer ce compte enseignant ?")) return;
+    TEACHER_AUTH.deleteAccount(id);
+    toast("Compte supprimé.");
+    renderTeacherTab("enseignants");
+  };
+  window.teacherLogout = function () {
+    TEACHER_AUTH.logout();
+    STATE.teacherAuth = false;
+    toast("Déconnexion enseignant.");
+    renderTeacher();
   };
 
   function renderSuiviTab(c) {

@@ -90,6 +90,10 @@
             <p class="muted" style="font-size:.8rem;">Pas d'identifiant ? Demande à ton enseignant de te créer un compte.</p>
             <p class="muted" style="font-size:.8rem;">Enseignant ? <button class="btn btn--sm btn--ghost" onclick="showView('enseignant')" style="color:var(--c-primary);">Accès enseignant</button></p>
           </div>
+          <div id="loginQr" style="margin-top:16px;text-align:center;">
+            <p class="muted" style="font-size:.75rem;margin-bottom:6px;">📱 Scanne pour accéder à SimASSP</p>
+            <img id="loginQrImg" alt="QR code SimASSP" style="width:140px;height:140px;border:1px solid var(--c-border);border-radius:8px;padding:4px;background:#fff;" />
+          </div>
         </div>
       </div>
     </section>
@@ -270,16 +274,27 @@
       <div class="teacher-gate" id="teacherGate">
         <div class="card card--center">
           <div class="card__icon">🔒</div>
-          <h3>Connexion enseignant</h3>
-          <p class="muted">Mot de passe par défaut : <code>ecbg2026</code> (à changer en production)</p>
-          <input type="password" id="teacherPwd" class="input" placeholder="Mot de passe" />
-          <button class="btn btn--primary" id="teacherLoginBtn">Se connecter</button>
-          <p class="error-msg" id="teacherError"></p>
+          <h3>Connexion enseignant / tuteur</h3>
+          <p class="muted">Identifiants créés par l'administrateur.</p>
+          <div class="login__form" style="max-width:320px;margin:0 auto;">
+            <label>Identifiant
+              <input type="text" id="teacherUser" class="input" placeholder="ex: enseignant" autocomplete="username" />
+            </label>
+            <label>Mot de passe
+              <input type="password" id="teacherPwd" class="input" placeholder="••••••••" autocomplete="current-password" />
+            </label>
+            <button class="btn btn--primary btn--lg" style="width:100%;justify-content:center;" id="teacherLoginBtn">Se connecter</button>
+            <p class="error-msg" id="teacherError"></p>
+          </div>
         </div>
       </div>
       <div class="teacher-panel" id="teacherPanel" hidden>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="teacherLogout()">🚪 Déconnexion enseignant</button>
+        </div>
         <div class="tabs">
-          <button class="tab tab--active" data-tab="comptes">👥 Comptes</button>
+          <button class="tab tab--active" data-tab="comptes">👥 Comptes élèves</button>
+          <button class="tab" data-tab="enseignants">👩‍🏫 Enseignants</button>
           <button class="tab" data-tab="suivi">📊 Suivi</button>
           <button class="tab" data-tab="scenarios">🎬 Scénarios</button>
           <button class="tab" data-tab="bilans">📈 Bilans</button>
