@@ -493,8 +493,9 @@
   function renderAutoeval() {
     var container = document.getElementById("autoevalContainer");
     if (!container) return;
+    // Ne pas ecraser les modifications en cours : les valeurs deja dans STATE.autoeval priment.
     var saved = loadAutoeval();
-    STATE.autoeval = saved;
+    STATE.autoeval = Object.assign({}, saved, STATE.autoeval || {});
     container.innerHTML = '<div class="autoeval__intro"><h3 style="color:var(--c-primary);margin:0 0 6px;">🪞 Autoévaluation par critères</h3><p class="muted">Évalue-toi honnêtement sur chaque critère. 0 = non acquis · 1 = en cours · 2 = acquis · 3 = maîtrisé. Puis compare avec ton tuteur.</p></div>' +
       D.CRITERES.map(function (c) {
         var val = (STATE.autoeval[c.id] !== undefined) ? STATE.autoeval[c.id] : "";
