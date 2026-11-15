@@ -43,6 +43,7 @@
         <button class="nav__btn" data-nav="scenarios">🎬 Scénarios</button>
         <button class="nav__btn" data-nav="autoeval">🪞 Autoéval</button>
         <button class="nav__btn" data-nav="dashboard">📊 Tableau</button>
+        <button class="nav__btn" data-nav="matheo">🤖 Mathéo IA</button>
         <button class="nav__btn nav__btn--accent" data-nav="enseignant">👩‍🏫 Enseignant</button>
       </nav>
       <button class="nav__toggle" id="navToggle" aria-label="Menu">☰</button>
@@ -195,6 +196,30 @@
       <div class="dashboard" id="dashboardContainer"></div>
     </section>
 
+    <!-- ---------- MATHEO IA ---------- -->
+    <section id="view-matheo" class="view">
+      <div class="pagehead">
+        <h1>🤖 Mathéo IA — Ton compagnon pédagogique</h1>
+        <p>Pose tes questions, demande des explications, travaille tes compétences. Mathéo t'accompagne.</p>
+      </div>
+      <div class="matheo">
+        <div class="matheo__quick">
+          <h3 style="color:var(--c-primary);margin:0 0 10px;">🚀 Questions rapides</h3>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Explique-moi la bientraitance en Bac Pro ASSP.')">Bientraitance</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Comment faire une bonne transmission orale ?')">Transmission</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Quels sont les signes d\\'hypoglycémie et que faire ?')">Hypoglycémie</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Comment animer une activité pour des résidents âgés ?')">Animation</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Explique le projet individualisé en Bac Pro ASSP.')">Projet individualisé</button>
+          </div>
+        </div>
+        <div class="matheo__frame">
+          <iframe src="https://you45-assistant-mr-anouar.hf.space" title="Mathéo IA" loading="lazy"></iframe>
+        </div>
+        <p class="muted" style="margin-top:10px;font-size:.8rem;">Si l'iframe ne se charge pas, <a href="https://you45-assistant-mr-anouar.hf.space" target="_blank">ouvre Mathéo IA dans un nouvel onglet ↗</a>.</p>
+      </div>
+    </section>
+
     <!-- ---------- ENSEIGNANT ---------- -->
     <section id="view-enseignant" class="view">
       <div class="pagehead">
@@ -233,6 +258,9 @@
 
   <!-- ============ TOAST ============ -->
   <div class="toast" id="toast" hidden></div>
+
+  <!-- ---------- FLOATING MATHEO BUTTON ---------- -->
+  <button class="fab-matheo" onclick="showView('matheo')" title="Mathéo IA">🤖</button>
 
   <footer class="footer">
     <p>SimASSP — Compagnon de progression professionnelle pour Bac Pro ASSP · Données locales (RGPD) · Créé par Mr ANOUAR</p>

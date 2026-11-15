@@ -320,10 +320,24 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 }
 .toast[hidden] { display: none; }
 
-/* ---------- Footer ---------- */
+/* ---------- Mathéo ---------- */
+.matheo__frame {
+  margin-top: 16px; border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-lg); border: 1px solid var(--c-border);
+  background: #fff;
+}
+.matheo__frame iframe { width: 100%; height: 600px; border: none; }
 .footer { text-align: center; padding: 24px; color: var(--c-muted); font-size: .8rem; border-top: 1px solid var(--c-border); margin-top: 40px; }
 
-/* ---------- Empty state ---------- */
+.fab-matheo {
+  position: fixed; bottom: 24px; right: 24px; z-index: 150;
+  width: 56px; height: 56px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #1e3a5f, #2e7d32);
+  color: #fff; font-size: 1.6rem; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(30,58,95,.3);
+  transition: transform .2s;
+}
+.fab-matheo:hover { transform: scale(1.1); }
 .empty-state { text-align: center; padding: 40px 20px; color: var(--c-muted); }
 .empty-state__icon { font-size: 3rem; margin-bottom: 10px; }
 

@@ -32,7 +32,7 @@
   function setLevel(compId, level) { STATE.progression[compId] = level; saveProgression(); }
 
   // ---------- NAVIGATION ----------
-  const views = ["accueil","parcours","scenarios","autoeval","dashboard","enseignant"];
+  const views = ["accueil","parcours","scenarios","autoeval","dashboard","matheo","enseignant"];
   function showView(name) {
     if (!views.includes(name)) name = "accueil";
     STATE.view = name;
@@ -700,6 +700,12 @@
   document.querySelector(".modal__backdrop").addEventListener("click", () => {
     document.getElementById("modal").hidden = true;
   });
+
+  window.openMatheoPrompt = function (prompt) {
+    const url = "https://you45-assistant-mr-anouar.hf.space";
+    const p = encodeURIComponent(prompt);
+    window.open(url + "?prompt=" + p, "_blank");
+  };
 
   // ---------- INIT ----------
   function init() {
