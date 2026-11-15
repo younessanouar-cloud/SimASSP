@@ -190,6 +190,35 @@
   function saveHistory(hist) {
     localStorage.setItem(userKey("simassp_history"), JSON.stringify(hist));
   }
+
+  // ---------- PFMP ----------
+  var PFMP_DATA = [
+    { id: "PFMP1", niveau: "2", numero: 1, titre: "PFMP 1 — Seconde — Période 1", objectifs: "Découverte de la structure d'accueil, observation des pratiques professionnelles, accueil des personnes, communication." },
+    { id: "PFMP2", niveau: "2", numero: 2, titre: "PFMP 2 — Seconde — Période 2", objectifs: "Réalisation de soins d'hygiène et de confort, surveillance de l'état de santé, transmission d'informations." },
+    { id: "PFMP3", niveau: "1", numero: 1, titre: "PFMP 3 — Première — Période 1", objectifs: "Soins plus complexes, participation au projet individualisé, éducation à la santé." },
+    { id: "PFMP4", niveau: "1", numero: 2, titre: "PFMP 4 — Première — Période 2", objectifs: "Conduite d'activités, démarche qualité, prévention des risques." },
+    { id: "PFMP5", niveau: "T", numero: 1, titre: "PFMP 5 — Terminale — Période 1", objectifs: "Autonomie professionnelle, projet individualisé, animation d'activités." },
+    { id: "PFMP6", niveau: "T", numero: 2, titre: "PFMP 6 — Terminale — Période 2", objectifs: "Projet individualisé complet, éducation à la santé, démarche qualité et autonomie." }
+  ];
+  function loadPFMP() {
+    try { return JSON.parse(localStorage.getItem("simassp_pfmp") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function savePFMP(obj) {
+    localStorage.setItem("simassp_pfmp", JSON.stringify(obj));
+  }
+  function getPFMPData(login) {
+    var all = loadPFMP();
+    if (!all[login]) all[login] = {};
+    return all[login];
+  }
+  function savePFMPData(login, pfmpId, data) {
+    var all = loadPFMP();
+    if (!all[login]) all[login] = {};
+    if (!all[login][pfmpId]) all[login][pfmpId] = {};
+    Object.keys(data).forEach(function (k) { all[login][pfmpId][k] = data[k]; });
+    savePFMP(all);
+  }
   // ---------- NIVEAUX DE COMPETENCES ----------
   function getLevel(id) {
     if (!STATE.progression) STATE.progression = {};
@@ -218,7 +247,7 @@
   };
 
   // ---------- NAVIGATION ----------
-  var views = ["login", "accueil", "parcours", "scenarios", "autoeval", "dashboard", "matheo", "enseignant"];
+  var views = ["login", "accueil", "parcours", "scenarios", "autoeval", "dashboard", "pfmp", "matheo", "enseignant"];
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser && !TEACHER_AUTH.currentUser) { name = "login"; }
@@ -245,6 +274,7 @@
     if (name === "scenarios") renderScenarios();
     if (name === "autoeval") renderAutoeval();
     if (name === "dashboard") renderDashboard();
+    if (name === "pfmp") renderPFMP();
     if (name === "enseignant") renderTeacher();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -704,6 +734,55 @@
     toast("Export téléchargé 📤");
   };
 
+  // ---------- PFMP ELEVE ----------
+  function renderPFMP() {
+    var container = document.getElementById("pfmpContainer");
+    if (!container) return;
+    var u = AUTH.currentUser;
+    if (!u) {
+      container.innerHTML = '<p class="muted">Connecte-toi pour accéder à tes PFMP.</p>';
+      return;
+    }
+    var niveau = u.niveau;
+    var pfmps = PFMP_DATA.filter(function (p) { return p.niveau === niveau; });
+    var login = u.login;
+    var pfmpData = getPFMPData(login);
+    var html = '';
+    pfmps.forEach(function (p) {
+      var d = pfmpData[p.id] || {};
+      var structure = d.structure || "";
+      var dateDebut = d.dateDebut || "";
+      var dateFin = d.dateFin || "";
+      html += '<div class="card" style="margin-bottom:16px;">' +
+        '<h3 style="color:var(--c-primary);margin:0 0 6px;">' + p.titre + '</h3>' +
+        '<p class="muted" style="font-size:.85rem;margin:0 0 10px;">' + p.objectifs + '</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Structure d\'accueil<input type="text" id="pfmp_structure_' + p.id + '" class="input" value="' + structure.replace(/"/g, '&quot;') + '" placeholder="Nom de la structure" /></label>' +
+        '<div></div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de début (renseignée par le tuteur)<input type="text" id="pfmp_debut_' + p.id + '" class="input" value="' + dateDebut + '" readonly style="background:#f5f5f5;" /></label>' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de fin (renseignée par le tuteur)<input type="text" id="pfmp_fin_' + p.id + '" class="input" value="' + dateFin + '" readonly style="background:#f5f5f5;" /></label>' +
+        '</div>' +
+        '<button class="btn btn--primary btn--sm" onclick="savePFMPStudent(\'' + p.id + '\')">💾 Enregistrer ma structure</button>' +
+        '</div>';
+    });
+    if (pfmps.length === 0) {
+      html = '<p class="muted">Aucune PFMP pour ton niveau.</p>';
+    }
+    container.innerHTML = html;
+  }
+  window.savePFMPStudent = function (pfmpId) {
+    var u = AUTH.currentUser;
+    if (!u) return;
+    var input = document.getElementById("pfmp_structure_" + pfmpId);
+    var structure = input ? input.value.trim() : "";
+    savePFMPData(u.login, pfmpId, { structure: structure });
+    try { saveStudentData(); } catch (e) {}
+    toast("Structure enregistrée ✅");
+  };
+  window.renderPFMP = renderPFMP;
+
   // ---------- ENSEIGNANT ----------
   function renderTeacher() {
     if (!TEACHER_AUTH.currentUser) {
@@ -756,6 +835,7 @@
     if (tab === "comptes") renderComptesTab(c);
     else if (tab === "enseignants") renderEnseignantsTab(c);
     else if (tab === "suivi") renderSuiviTab(c);
+    else if (tab === "pfmp") renderPFMPTab(c);
     else if (tab === "scenarios") renderScenariosTab(c);
     else if (tab === "bilans") renderBilansTab(c);
   }
@@ -913,6 +993,75 @@
     toast("Déconnexion enseignant.");
     renderTeacher();
   };
+
+  if (STATE.pfmpSelectedStudent === undefined) STATE.pfmpSelectedStudent = null;
+  function renderPFMPTab(c) {
+    var students = loadStudentsData();
+    var logins = Object.keys(students);
+    var u = AUTH.currentUser;
+    if (u && !students[u.login]) {
+      students[u.login] = { name: u.prenom + " " + u.nom, progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory(), imported: "connecté" };
+      logins = Object.keys(students);
+    }
+    if (logins.length === 0) {
+      c.innerHTML = '<h3 style="color:var(--c-primary);">📋 PFMP</h3><p class="muted">Aucun élève disponible. Demande aux élèves d\'enregistrer leurs données.</p>';
+      return;
+    }
+    if (!STATE.pfmpSelectedStudent || logins.indexOf(STATE.pfmpSelectedStudent) === -1) {
+      STATE.pfmpSelectedStudent = logins[0];
+    }
+    var selectedLogin = STATE.pfmpSelectedStudent;
+    var s = students[selectedLogin];
+    var studentName = s.name || selectedLogin;
+    var niveau = s.niveau || (u ? u.niveau : "2");
+    var pfmps = PFMP_DATA.filter(function (p) { return p.niveau === niveau; });
+    var pfmpData = getPFMPData(selectedLogin);
+    var options = logins.map(function (l) {
+      return '<option value="' + l + '"' + (l === selectedLogin ? ' selected' : '') + '>' + (students[l].name || l) + '</option>';
+    }).join("");
+    var html = '<h3 style="color:var(--c-primary);">📋 PFMP — Périodes de formation en milieu professionnel</h3>' +
+      '<div style="margin-bottom:12px;"><label style="font-size:.85rem;font-weight:600;color:var(--c-muted);">Élève : <select id="pfmpStudentSelect" class="input" style="width:auto;min-width:200px;">' + options + '</select></label></div>' +
+      '<p class="muted">Élève sélectionné : <strong>' + studentName + '</strong> · Niveau : ' + (niveau === "2" ? "Seconde" : niveau === "1" ? "Première" : "Terminale") + '</p>';
+    pfmps.forEach(function (p) {
+      var d = pfmpData[p.id] || {};
+      var structure = d.structure || "";
+      var dateDebut = d.dateDebut || "";
+      var dateFin = d.dateFin || "";
+      html += '<div class="card" style="margin-bottom:16px;">' +
+        '<h4 style="color:var(--c-primary);margin:0 0 6px;">' + p.titre + '</h4>' +
+        '<p class="muted" style="font-size:.85rem;margin:0 0 10px;">' + p.objectifs + '</p>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Structure d\'accueil (renseignée par l’élève)<input type="text" id="pfmp_structure_' + p.id + '" class="input" value="' + structure.replace(/"/g, '&quot;') + '" readonly style="background:#f5f5f5;" /></label>' +
+        '<div></div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de début<input type="date" id="pfmp_debut_' + p.id + '" class="input" value="' + dateDebut + '" /></label>' +
+        '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de fin<input type="date" id="pfmp_fin_' + p.id + '" class="input" value="' + dateFin + '" /></label>' +
+        '</div>' +
+        '<button class="btn btn--primary btn--sm" onclick="savePFMPTeacher(\'' + p.id + '\')">💾 Enregistrer les dates</button>' +
+        '</div>';
+    });
+    if (pfmps.length === 0) {
+      html += '<p class="muted">Aucune PFMP pour ce niveau.</p>';
+    }
+    c.innerHTML = html;
+    var sel = document.getElementById("pfmpStudentSelect");
+    if (sel) sel.addEventListener("change", function () {
+      STATE.pfmpSelectedStudent = this.value;
+      renderPFMPTab(c);
+    });
+  }
+  window.savePFMPTeacher = function (pfmpId) {
+    var login = STATE.pfmpSelectedStudent;
+    if (!login) return;
+    var debut = document.getElementById("pfmp_debut_" + pfmpId);
+    var fin = document.getElementById("pfmp_fin_" + pfmpId);
+    var dateDebut = debut ? debut.value : "";
+    var dateFin = fin ? fin.value : "";
+    savePFMPData(login, pfmpId, { dateDebut: dateDebut, dateFin: dateFin });
+    toast("Dates enregistrées ✅");
+  };
+  window.renderPFMPTab = renderPFMPTab;
 
   function renderSuiviTab(c) {
     var hist = loadHistory();
