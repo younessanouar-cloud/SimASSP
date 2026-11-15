@@ -200,6 +200,7 @@
     if (!STATE.progression) STATE.progression = {};
     STATE.progression[id] = level;
     try { saveProgression(); } catch (e) {}
+    try { saveStudentData(); } catch (e) {}
   }
 
   // ---------- ÉTAT ----------
@@ -540,6 +541,7 @@
     var hist = loadHistory();
     hist.unshift({ date: new Date().toLocaleString("fr-FR"), scenario: s.titre, bloc: s.bloc, score: STATE.score, total: s.steps.length, reflex: reflex, variant: STATE.variant ? STATE.variant.titre : null, user: AUTH.currentUser ? AUTH.currentUser.login : "anon" });
     saveHistory(hist.slice(0, 100));
+    try { saveStudentData(); } catch (e) {}
     toast("Scénario enregistré dans ton parcours ✅");
     showView("dashboard");
   };
@@ -589,6 +591,7 @@
   };
   window.saveAutoeval = function () {
     saveAutoeval();
+    try { saveStudentData(); } catch (e) {}
     toast("Autoévaluation enregistrée 🪞");
     updateGap();
   };
@@ -670,14 +673,30 @@
         hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + h.scenario + (h.variant ? ' (' + h.variant + ')' : '') + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
         '</tbody></table>') +
       '</div>' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--primary" onclick="saveStudentData();toast(\'Données enregistrées pour l\\\'enseignant ✅\')">💾 Enregistrer mes données pour l\'enseignant</button><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
   }
+  function saveStudentData() {
+    var u = AUTH.currentUser;
+    if (!u) return;
+    var students = loadStudentsData();
+    if (!students[u.login]) students[u.login] = { name: u.prenom + " " + u.nom, niveau: u.niveau, classe: u.classe, progression: {}, autoeval: {}, history: [], imported: "" };
+    students[u.login].name = u.prenom + " " + u.nom;
+    students[u.login].niveau = u.niveau;
+    students[u.login].classe = u.classe;
+    students[u.login].progression = STATE.progression || {};
+    students[u.login].autoeval = loadAutoeval() || {};
+    students[u.login].history = loadHistory() || [];
+    students[u.login].imported = new Date().toLocaleString("fr-FR");
+    saveStudentsData(students);
+  }
+  window.saveStudentData = saveStudentData;
   window.exportData = function () {
     var u = AUTH.currentUser;
     var data = {
       student: { login: u ? u.login : "anon", name: u ? (u.prenom + " " + u.nom) : "Anonyme", niveau: u ? u.niveau : "", classe: u ? u.classe : "" },
       progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory()
     };
+    saveStudentData();
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a"); a.href = url; a.download = "simassp_export.json"; a.click();
@@ -896,12 +915,25 @@
 
   function renderSuiviTab(c) {
     var hist = loadHistory();
-    c.innerHTML = '<h3 style="color:var(--c-primary);">👥 Suivi des scénarios réalisés</h3>' +
-      '<p class="muted">Données de l\'élève connecté. Pour le suivi multi-élèves, importer les exports JSON.</p>' +
-      '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--sm btn--accent" onclick="importEleveData()">📥 Importer données élève</button></div>' +
+    var students = loadStudentsData();
+    var studentRows = Object.keys(students).map(function (login) {
+      var s = students[login];
+      var sprog = s.progression || {};
+      var comps = D.COMPETENCES;
+      var done = comps.filter(function (cp) { return (sprog[cp.id] || 0) >= 2; }).length;
+      var shist = s.history || [];
+      return '<tr><td>' + (s.name || login) + '</td><td>' + login + '</td><td>' + done + '/' + comps.length + '</td><td>' + shist.length + '</td><td style="font-size:.75rem;">' + (s.imported || "—") + '</td></tr>';
+    }).join("");
+    c.innerHTML = '<h3 style="color:var(--c-primary);">👥 Suivi des élèves</h3>' +
+      '<p class="muted">Les données apparaissent automatiquement quand un élève clique sur "💾 Enregistrer mes données". Tu peux aussi importer un export JSON.</p>' +
+      '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--sm btn--accent" onclick="importEleveData()">📥 Importer données élève (JSON)</button><button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="renderTeacherTab(\'suivi\')">🔄 Actualiser</button></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">👥 Élèves enregistrés (' + Object.keys(students).length + ')</h4>' +
+      (Object.keys(students).length === 0 ? '<p class="muted">Aucun élève enregistré. Demande aux élèves de cliquer sur "💾 Enregistrer mes données" dans leur tableau de bord.</p>' :
+        '<table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Scénarios réalisés</th><th>Dernier enregistrement</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📜 Scénarios réalisés (élève connecté)</h4>' +
       (hist.length === 0 ? '<p class="muted">Aucun scénario réalisé.</p>' :
-        '<table class="table"><thead><tr><th>Date</th><th>Élève</th><th>Scénario</th><th>Bloc</th><th>Score</th><th>Réflexivité</th></tr></thead><tbody>' +
-        hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + (h.user || "—") + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td><td style="max-width:200px;font-size:.75rem;">' + (h.reflex || "—") + '</td></tr>'; }).join("") +
+        '<table class="table"><thead><tr><th>Date</th><th>Élève</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
+        hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + (h.user || "—") + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
         '</tbody></table>');
   }
 
