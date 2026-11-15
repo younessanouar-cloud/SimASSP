@@ -138,7 +138,7 @@
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser) { name = "login"; }
-    if (name === "enseignant" && !STATE.teacherAuth && !AUTH.currentUser) { name = "login"; }
+    // L'espace enseignant est accessible via son propre mot de passe (gate), meme sans compte eleve connecte.
     STATE.view = name;
     document.body.classList.toggle("login-mode", name === "login");
     var els = document.querySelectorAll(".view");
