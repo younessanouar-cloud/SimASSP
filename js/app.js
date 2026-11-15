@@ -966,32 +966,63 @@
       '</tbody></table>';
   }
 
+  function loadTuteurEvals() {
+    try { return JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "{}"); }
+    catch (e) { return {}; }
+  }
+  function saveTuteurEvals(obj) {
+    localStorage.setItem("simassp_tuteur_evals", JSON.stringify(obj));
+  }
+  if (STATE.bilanSelectedStudent === undefined) STATE.bilanSelectedStudent = null;
   function renderBilansTab(c) {
-    var prog = STATE.progression;
     var comps = D.COMPETENCES;
-    var tuteurSaved = {};
-    try { tuteurSaved = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}"); } catch (e) {}
-    var u = AUTH.currentUser;
-    var studentName = u ? (u.prenom + " " + u.nom) : "Élève connecté";
     var students = loadStudentsData();
+    var logins = Object.keys(students);
+    // Inclure l'eleve connecte s'il existe
+    var u = AUTH.currentUser;
+    if (u && !students[u.login]) {
+      students[u.login] = { name: u.prenom + " " + u.nom, progression: STATE.progression, autoeval: loadAutoeval(), history: loadHistory(), imported: "connecté" };
+      logins = Object.keys(students);
+    }
+    if (logins.length === 0) {
+      c.innerHTML = '<h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>' +
+        '<p class="muted">Aucun élève disponible. Importe les exports JSON des élèves dans l\'onglet Suivi, ou connecte-toi en tant qu\'élève.</p>';
+      return;
+    }
+    if (!STATE.bilanSelectedStudent || logins.indexOf(STATE.bilanSelectedStudent) === -1) {
+      STATE.bilanSelectedStudent = logins[0];
+    }
+    var selectedLogin = STATE.bilanSelectedStudent;
+    var s = students[selectedLogin];
+    var prog = s.progression || {};
+    var tuteurEvals = loadTuteurEvals();
+    var tuteurSaved = tuteurEvals[selectedLogin] || {};
+    var studentName = s.name || selectedLogin;
+    var vals = Object.keys(prog).map(function (k) { return prog[k]; });
+    var avg = vals.length ? (vals.reduce(function (a, b) { return a + b; }, 0) / comps.length).toFixed(1) : "0.0";
+    var done = comps.filter(function (cp) { return (prog[cp.id] || 0) >= 2; }).length;
     var studentRows = Object.keys(students).map(function (login) {
-      var s = students[login];
-      var sprog = s.progression || {};
-      var vals = Object.keys(sprog).map(function (k) { return sprog[k]; });
-      var avg = vals.length ? (vals.reduce(function (a, b) { return a + b; }, 0) / comps.length).toFixed(1) : "0.0";
-      var done = comps.filter(function (cp) { return (sprog[cp.id] || 0) >= 2; }).length;
-      return '<tr><td>' + (s.name || login) + '</td><td>' + login + '</td><td>' + done + '/' + comps.length + '</td><td>' + avg + '/3</td><td style="font-size:.75rem;">' + (s.imported || "—") + '</td></tr>';
+      var st = students[login];
+      var sprog = st.progression || {};
+      var v = Object.keys(sprog).map(function (k) { return sprog[k]; });
+      var a = v.length ? (v.reduce(function (x, y) { return x + y; }, 0) / comps.length).toFixed(1) : "0.0";
+      var d = comps.filter(function (cp) { return (sprog[cp.id] || 0) >= 2; }).length;
+      return '<tr><td>' + (st.name || login) + '</td><td>' + login + '</td><td>' + d + '/' + comps.length + '</td><td>' + a + '/3</td><td style="font-size:.75rem;">' + (st.imported || "—") + '</td></tr>';
+    }).join("");
+    var options = logins.map(function (l) {
+      return '<option value="' + l + '"' + (l === selectedLogin ? ' selected' : '') + '>' + (students[l].name || l) + '</option>';
     }).join("");
     c.innerHTML = '<h3 style="color:var(--c-primary);">📈 Bilan de progression</h3>' +
-      '<p class="muted">Élève affiché : <strong>' + studentName + '</strong>. Importe les exports JSON des élèves pour les suivre ici.</p>' +
-      '<div class="card" style="margin-bottom:16px;"><h4 style="color:var(--c-primary);margin:0 0 8px;">👩‍🏫 Évaluation tuteur (par critère)</h4>' +
+      '<div style="margin-bottom:12px;"><label style="font-size:.85rem;font-weight:600;color:var(--c-muted);">Élève : <select id="bilanStudentSelect" class="input" style="width:auto;min-width:200px;">' + options + '</select></label></div>' +
+      '<p class="muted">Élève sélectionné : <strong>' + studentName + '</strong> · ' + done + '/' + comps.length + ' compétences ≥2 · Niveau moyen ' + avg + '/3</p>' +
+      '<div class="card" style="margin-bottom:16px;"><h4 style="color:var(--c-primary);margin:0 0 8px;">👩‍🏫 Évaluation tuteur (par critère) — ' + studentName + '</h4>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
       D.CRITERES.map(function (cr) {
         return '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">' + cr.label + '<select id="tuteur_' + cr.id + '" style="width:100%;padding:6px;border:1px solid var(--c-border);border-radius:6px;">' +
           [0, 1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (tuteurSaved[cr.id] === n ? ' selected' : '') + '>' + n + '</option>'; }).join("") + '</select></label>';
       }).join("") + '</div>' +
-      '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">💾 Enregistrer éval. tuteur</button></div>' +
-      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📊 Progression de ' + studentName + '</h4>' +
+      '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">💾 Enregistrer éval. tuteur pour ' + studentName + '</button></div>' +
+      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📊 Progression des compétences — ' + studentName + '</h4>' +
       '<table class="table"><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>' +
       comps.map(function (cp) { return '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td>' + (prog[cp.id] || 0) + '/3</td></tr>'; }).join("") +
       '</tbody></table>' +
@@ -999,6 +1030,11 @@
       (Object.keys(students).length === 0 ? '<p class="muted">Aucun élève importé. Utilise "📥 Importer données élève" dans l\'onglet Suivi.</p>' :
         '<table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
       '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">📄 Exporter bilan PDF</button></div>';
+    var sel = document.getElementById("bilanStudentSelect");
+    if (sel) sel.addEventListener("change", function () {
+      STATE.bilanSelectedStudent = this.value;
+      renderBilansTab(c);
+    });
   }
 
   window.saveTuteurEval = function () {
@@ -1007,18 +1043,28 @@
       var sel = document.getElementById("tuteur_" + cr.id);
       if (sel) obj[cr.id] = parseInt(sel.value);
     });
+    var login = STATE.bilanSelectedStudent;
+    if (login) {
+      var evals = loadTuteurEvals();
+      evals[login] = obj;
+      saveTuteurEvals(evals);
+    }
+    // compatibilite avec l'ancien stockage global
     localStorage.setItem("simassp_tuteur_eval", JSON.stringify(obj));
     toast("Évaluation tuteur enregistrée 👩‍🏫");
   };
 
   window.exportBilanPDF = function () {
     var w = window.open("", "_blank");
-    var prog = STATE.progression;
+    var students = loadStudentsData();
+    var login = STATE.bilanSelectedStudent;
+    var s = students[login] || {};
+    var prog = s.progression || STATE.progression;
     var comps = D.COMPETENCES;
-    var u = AUTH.currentUser;
+    var name = s.name || (AUTH.currentUser ? (AUTH.currentUser.prenom + " " + AUTH.currentUser.nom) : "—");
     w.document.write('<!DOCTYPE html><html><head><title>Bilan SimASSP</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#1e3a5f;color:#fff;}h1{color:#1e3a5f;}</style></head><body>' +
       '<h1>Bilan de progression — SimASSP</h1>' +
-      '<p>Élève : ' + (u ? u.prenom + " " + u.nom : "—") + ' · Niveau : ' + (u ? (u.niveau === "2" ? "Seconde" : u.niveau === "1" ? "Première" : "Terminale") : "—") + ' · Classe : ' + (u ? u.classe : "—") + '</p>' +
+      '<p>Élève : ' + name + '</p>' +
       '<p>Date : ' + new Date().toLocaleDateString("fr-FR") + '</p>' +
       '<table><thead><tr><th>Compétence</th><th>Bloc</th><th>Niveau</th></tr></thead><tbody>' +
       comps.map(function (c) { return '<tr><td>' + c.id + ' — ' + c.titre + '</td><td>' + c.bloc + '</td><td>' + (prog[c.id] || 0) + '/3</td></tr>'; }).join("") +
