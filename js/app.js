@@ -595,7 +595,7 @@
   function renderScenarios() {
     var list = document.getElementById("scenarioList");
     if (!list) return;
-    var randomBtn = '<button class="btn btn--accent btn--sm" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="openScenario(D.SCENARIOS[Math.floor(Math.random()*D.SCENARIOS.length)].id)">🎲 Scénario aléatoire</button>';
+    var randomBtn = '<button class="btn btn--accent btn--sm" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="openRandomScenario()">🎲 Scénario aléatoire</button>';
     list.innerHTML = randomBtn + D.SCENARIOS.map(function (s) {
       var b = D.BLOCS.filter(function (x) { return x.code === s.bloc; })[0];
       return '<div class="scenario-item ' + (STATE.scenario && STATE.scenario.id === s.id ? 'scenario-item--active' : '') + '" onclick="openScenario(\'' + s.id + '\')">' +
@@ -627,6 +627,16 @@
     var step = s.steps[STATE.stepIndex];
     var txt = s.titre + ". " + (STATE.variant ? STATE.variant.description + ". " : "") + (step ? step.q : "");
     speak(txt);
+  };
+  window.openRandomScenario = function () {
+    var idx = Math.floor(Math.random() * D.SCENARIOS.length);
+    openScenario(D.SCENARIOS[idx].id);
+  };
+  window.openRandomVariant = function () {
+    var s = STATE.scenario;
+    if (!s || !s.variantes || !s.variantes.length) return;
+    var idx = Math.floor(Math.random() * s.variantes.length);
+    openScenario(s.id, idx);
   };
   window.openScenario = function (id, variantIdx) {
     STATE.scenario = null;
@@ -673,7 +683,7 @@
         '<button class="btn btn--primary" onclick="finishScenario()">✅ Valider et enregistrer</button>' +
         '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="replayScenario()">🔁 Rejouer</button>' +
         (s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="showVariants()">🔀 Variantes</button>' : '') +
-(s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openScenario(STATE.scenario.id, Math.floor(Math.random()*STATE.scenario.variantes.length))">🎲 Variante aléatoire</button>' : '') +
+(s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openRandomVariant()">🎲 Variante aléatoire</button>' : '') +
         '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="askMatheo()">🤖 Demander à Mathéo</button>' +
         '</div></div>';
       return;
