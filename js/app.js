@@ -768,14 +768,49 @@
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de début (renseignée par le tuteur)<input type="text" id="pfmp_debut_' + p.id + '" class="input" value="' + dateDebut + '" readonly style="background:#f5f5f5;" /></label>' +
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);">Date de fin (renseignée par le tuteur)<input type="text" id="pfmp_fin_' + p.id + '" class="input" value="' + dateFin + '" readonly style="background:#f5f5f5;" /></label>' +
         '</div>' +
-        '<button class="btn btn--primary btn--sm" onclick="savePFMPStudent(\'' + p.id + '\')">💾 Enregistrer ma structure</button>' +
+        '<button class="btn btn--primary btn--sm" onclick="savePFMPStudent(\'' + p.id + '\')">💾 Enregistrer</button>' +
         '</div>';
     });
     if (pfmps.length === 0) {
       html = '<p class="muted">Aucune PFMP pour ton niveau.</p>';
     }
+    html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportPFMPPDF()">📄 Exporter mes PFMP en PDF</button></div>';
     container.innerHTML = html;
   }
+  window.exportPFMPPDF = function () {
+    var w = window.open("", "_blank");
+    var login = STATE.pfmpSelectedStudent || (AUTH.currentUser ? AUTH.currentUser.login : null);
+    if (!login) { toast("Aucun élève sélectionné."); return; }
+    var students = loadStudentsData();
+    var s = students[login] || {};
+    var name = s.name || login;
+    var niveau = s.niveau || (AUTH.currentUser ? AUTH.currentUser.niveau : "2");
+    var niveauLabel = niveau === "2" ? "Seconde" : niveau === "1" ? "Première" : "Terminale";
+    var pfmpData = getPFMPData(login);
+    var css = 'body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;} h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:6px;} h2{color:#2e7d32;margin-top:18px;} table{width:100%;border-collapse:collapse;margin:8px 0;} th,td{border:1px solid #ccc;padding:6px;font-size:11px;vertical-align:top;} th{background:#1e3a5f;color:#fff;} .meta{font-size:12px;color:#555;margin:4px 0;}';
+    var html = '<!DOCTYPE html><html><head><title>PFMP SimASSP - ' + name + '</title><style>' + css + '</style></head><body>';
+    html += '<h1>PFMP — Périodes de formation en milieu professionnel</h1>';
+    html += '<p class="meta">Élève : <strong>' + name + '</strong> · Niveau : ' + niveauLabel + ' · Identifiant : ' + login + '</p>';
+    html += '<p class="meta">Date d’export : ' + new Date().toLocaleDateString("fr-FR") + '</p>';
+    PFMP_DATA.forEach(function (p) {
+      if (p.niveau !== niveau) return;
+      var d = pfmpData[p.id] || {};
+      html += '<h2>' + p.titre + '</h2>';
+      html += '<p class="meta">' + p.objectifs + '</p>';
+      html += '<table><tbody>';
+      html += '<tr><th style="width:30%;">Structure d’accueil</th><td>' + (d.structure || "—") + '</td></tr>';
+      html += '<tr><th>Date de début</th><td>' + (d.dateDebut || "—") + '</td></tr>';
+      html += '<tr><th>Date de fin</th><td>' + (d.dateFin || "—") + '</td></tr>';
+      html += '<tr><th>Objectifs de l’élève</th><td>' + (d.objectifsEleve || "—") + '</td></tr>';
+      html += '<tr><th>Objectifs du tuteur</th><td>' + (d.objectifsTuteur || "—") + '</td></tr>';
+      html += '</tbody></table>';
+    });
+    html += '<script>window.print();</script></body></html>';
+    w.document.write(html);
+    w.document.close();
+  };
+  window.exportPFMPPDF = exportPFMPPDF;
+
   window.savePFMPStudent = function (pfmpId) {
     var u = AUTH.currentUser;
     if (!u) return;
@@ -1048,12 +1083,13 @@
         '</div>' +
         (objEleve ? '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Objectifs de l\'élève (lecture seule)<textarea class="input" rows="3" style="width:100%;min-width:0;background:#f5f5f5;" readonly>' + objEleve.replace(/</g, '&lt;') + '</textarea></label>' : '') +
         '<label style="font-size:.8rem;font-weight:600;color:var(--c-muted);display:block;margin-bottom:6px;">Objectifs du tuteur<textarea id="pfmp_objtuteur_' + p.id + '" class="input" rows="3" style="width:100%;min-width:0;">' + objTuteur.replace(/</g, '&lt;') + '</textarea></label>' +
-        '<button class="btn btn--primary btn--sm" onclick="savePFMPTeacher(\'' + p.id + '\')">💾 Enregistrer les dates</button>' +
+        '<button class="btn btn--primary btn--sm" onclick="savePFMPTeacher(\'' + p.id + '\')">💾 Enregistrer</button>' +
         '</div>';
     });
     if (pfmps.length === 0) {
       html += '<p class="muted">Aucune PFMP pour ce niveau.</p>';
     }
+    html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportPFMPPDF()">📄 Exporter les PFMP en PDF</button></div>';
     c.innerHTML = html;
     var sel = document.getElementById("pfmpStudentSelect");
     if (sel) sel.addEventListener("change", function () {
