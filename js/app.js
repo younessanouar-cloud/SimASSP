@@ -369,6 +369,8 @@
     view: "login",
     scenario: null,
     variant: null,
+    shuffledChoices: null,
+    shuffledFor: -1,
     stepIndex: 0,
     score: 0,
     answers: [],
@@ -648,6 +650,8 @@
     STATE.score = 0;
     STATE.answers = [];
     STATE.hintLevel = 0;
+    STATE.shuffledChoices = null;
+    STATE.shuffledFor = -1;
     renderScenarios();
   };
 
@@ -692,6 +696,17 @@
     var step = s.steps[idx];
     var hints = s.hints || [];
     var hintHtml = (STATE.hintLevel > 0 && hints.length) ? '<div class="hint">💡 Indice ' + STATE.hintLevel + '/' + hints.length + ' : ' + hints[STATE.hintLevel - 1] + '</div>' : "";
+    // Mélanger les propositions pour ne pas toujours avoir la bonne réponse en 1er
+    if (STATE.shuffledFor !== idx || !STATE.shuffledChoices) {
+      var arr = (step.choices || []).slice();
+      for (var si = arr.length - 1; si > 0; si--) {
+        var sj = Math.floor(Math.random() * (si + 1));
+        var stmp = arr[si]; arr[si] = arr[sj]; arr[sj] = stmp;
+      }
+      STATE.shuffledChoices = arr;
+      STATE.shuffledFor = idx;
+    }
+    var shuffled = STATE.shuffledChoices;
     var mediaHtml = "";
     if (s.video) mediaHtml += '<div style="margin-bottom:12px;"><video controls preload="metadata" style="width:100%;max-height:260px;border-radius:8px;background:#000;" src="' + s.video + '"></video></div>';
     if (s.audio) mediaHtml += '<div style="margin-bottom:12px;"><audio controls preload="metadata" style="width:100%;" src="' + s.audio + '"></audio></div>';
@@ -702,7 +717,7 @@
       '<div class="progress-bar"><div class="progress-bar__fill" style="width:' + (idx / total * 100) + '%"></div></div>' +
       '<div class="scenario-step">' +
       '<div class="scenario-step__q">' + step.q + '</div>' +
-      step.choices.map(function (ch, i) { return '<button class="choice" onclick="chooseAnswer(' + i + ')">' + String.fromCharCode(65 + i) + '. ' + ch.text + '</button>'; }).join("") +
+      shuffled.map(function (ch, i) { return '<button class="choice" onclick="chooseAnswer(' + i + ')">' + String.fromCharCode(65 + i) + '. ' + ch.text + '</button>'; }).join("") +
       hintHtml +
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
       (hints.length ? '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="revealHint()">💡 Indice (' + STATE.hintLevel + '/' + hints.length + ')</button>' : '') +
@@ -713,12 +728,13 @@
   window.chooseAnswer = function (i) {
     var s = STATE.scenario;
     var step = s.steps[STATE.stepIndex];
-    var ch = step.choices[i];
+    var choices = STATE.shuffledChoices || step.choices;
+    var ch = choices[i];
     var btns = document.querySelectorAll(".choice");
     for (var k = 0; k < btns.length; k++) {
       btns[k].disabled = true;
       if (k === i) btns[k].classList.add(ch.correct ? "choice--correct" : "choice--wrong");
-      if (step.choices[k].correct) btns[k].classList.add("choice--correct");
+      if (choices[k].correct) btns[k].classList.add("choice--correct");
     }
     if (ch.correct) STATE.score++;
     STATE.answers.push({ step: STATE.stepIndex, choice: i, correct: ch.correct });
@@ -735,6 +751,8 @@
   window.nextStep = function () {
     STATE.stepIndex++;
     STATE.hintLevel = 0;
+    STATE.shuffledChoices = null;
+    STATE.shuffledFor = -1;
     renderScenarioPlay();
   };
 
@@ -750,7 +768,7 @@
   };
 
   window.replayScenario = function () {
-    STATE.stepIndex = 0; STATE.score = 0; STATE.answers = []; STATE.hintLevel = 0;
+    STATE.stepIndex = 0; STATE.score = 0; STATE.answers = []; STATE.hintLevel = 0; STATE.shuffledChoices = null; STATE.shuffledFor = -1;
     renderScenarioPlay();
   };
 
