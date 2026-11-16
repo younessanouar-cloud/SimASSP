@@ -1229,27 +1229,45 @@
       var file = e.target.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function (ev) {
+      reader.onload = async function (ev) {
         try {
           var data = JSON.parse(ev.target.result);
           if (!Array.isArray(data)) throw new Error("format");
           var n = 0;
+          var idx = 0;
+          var generated = [];
           data.forEach(function (d) {
             if (!d.login) return;
             if (AUTH.accounts.some(function (a) { return a.login === d.login; })) return;
+            var pwd = d.password || AUTH.genPassword();
             AUTH.accounts.push({
-              id: "u_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+              id: "u_" + Date.now() + "_" + idx + "_" + Math.random().toString(36).slice(2, 8),
               login: d.login,
-              passwordHash: AUTH.hash(d.password || AUTH.genPassword()),
+              passwordHash: AUTH.hash(pwd),
               prenom: d.prenom || "", nom: d.nom || "",
               niveau: d.niveau || "2", classe: d.classe || "",
-              created: d.created || new Date().toLocaleString("fr-FR")
+              created: d.created || new Date().toLocaleString("fr-FR"),
+              mustChangePassword: !d.password
             });
+            if (!d.password) generated.push({ login: d.login, pwd: pwd });
+            idx++;
             n++;
           });
-          AUTH.saveAccounts();
+          // Persistance synchrone locale d'abord (evite la perte en cas de deconnexion rapide)
+          try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
+          await AUTH.saveAccounts();
           toast(n + " compte(s) importé(s) ✅");
           renderTeacherTab("comptes");
+          // Afficher les mots de passe generes pour distribution
+          if (generated.length > 0) {
+            var html = '<h3 style="color:var(--c-primary);">🔑 Mots de passe générés</h3>' +
+              '<p class="muted" style="font-size:.8rem;">Note ces identifiants, ils ne seront plus affichés. Les élèves devront changer leur mot de passe à la première connexion.</p>' +
+              '<div class="table-wrap"><table class="table"><thead><tr><th>Identifiant</th><th>Mot de passe</th></tr></thead><tbody>' +
+              generated.map(function (g) { return '<tr><td><code>' + g.login + '</code></td><td><code>' + g.pwd + '</code></td></tr>'; }).join("") +
+              '</tbody></table></div>' +
+              '<button class="btn btn--primary" style="margin-top:12px;" onclick="closeModal()">OK</button>';
+            openModal(html);
+          }
         } catch (err) { toast("Fichier invalide ❌"); }
       };
       reader.readAsText(file);
