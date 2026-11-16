@@ -390,9 +390,28 @@
     })(navBtns[k]));
   }
   var navToggle = document.getElementById("navToggle");
-  if (navToggle) navToggle.addEventListener("click", function () {
-    document.querySelector(".nav").classList.toggle("nav--open");
-  });
+  var navEl = document.querySelector(".nav");
+  if (navToggle && navEl) {
+    navToggle.addEventListener("click", function (e) {
+      e.stopPropagation();
+      navEl.classList.toggle("nav--open");
+      navToggle.textContent = navEl.classList.contains("nav--open") ? "✕" : "☰";
+    });
+    // Fermer le menu quand on clique sur un lien de navigation
+    navEl.addEventListener("click", function (e) {
+      if (e.target.classList.contains("nav__btn")) {
+        navEl.classList.remove("nav--open");
+        navToggle.textContent = "☰";
+      }
+    });
+    // Fermer le menu quand on clique a l'exterieur
+    document.addEventListener("click", function (e) {
+      if (navEl.classList.contains("nav--open") && !navEl.contains(e.target) && e.target !== navToggle) {
+        navEl.classList.remove("nav--open");
+        navToggle.textContent = "☰";
+      }
+    });
+  }
 
   function updateUserBadge() {
     var badge = document.getElementById("userBadge");
@@ -762,14 +781,14 @@
       c.innerHTML = '<div class="gap-card" style="background:#e3f2fd;border-left-color:#1565c0;"><strong>👥 Évaluation tuteur</strong><br>Aucune évaluation tuteur enregistrée. L\'enseignant peut en saisir une dans l\'espace enseignant.</div>';
       return;
     }
-    c.innerHTML = '<div class="chart-card" style="margin-top:14px;"><h3>👥 Comparaison élève / tuteur</h3><table class="table"><thead><tr><th>Critère</th><th>Élève</th><th>Tuteur</th><th>Écart</th></tr></thead><tbody>' +
+    c.innerHTML = '<div class="chart-card" style="margin-top:14px;"><h3>👥 Comparaison élève / tuteur</h3><div class="table-wrap"><table class="table"><thead><tr><th>Critère</th><th>Élève</th><th>Tuteur</th><th>Écart</th></tr></thead><tbody>' +
       D.CRITERES.map(function (cr) {
         var e = STATE.autoeval[cr.id] || 0;
         var t = tuteur[cr.id] || 0;
         var ecart = e - t;
         var color = ecart === 0 ? "var(--c-accent)" : (ecart > 0 ? "var(--c-warn)" : "var(--c-danger)");
         return '<tr><td>' + cr.label + '</td><td>' + e + '/3</td><td>' + t + '/3</td><td style="color:' + color + ';font-weight:700;">' + (ecart > 0 ? '+' : '') + ecart + '</td></tr>';
-      }).join("") + '</tbody></table><p class="muted" style="margin-top:8px;font-size:.75rem;">Écart positif = autoévaluation plus optimiste que le tuteur. Écart négatif = plus sévère.</p></div>';
+      }).join("") + '</tbody></table></div><p class="muted" style="margin-top:8px;font-size:.75rem;">Écart positif = autoévaluation plus optimiste que le tuteur. Écart négatif = plus sévère.</p></div>';
   };
 
   // ---------- DASHBOARD ----------
@@ -811,9 +830,9 @@
       }).join("") + '</div>' +
       '<div class="chart-card"><h3>📜 Historique des scénarios</h3>' +
       (hist.length === 0 ? '<p class="muted">Aucun scénario réalisé pour l\'instant.</p>' :
-        '<table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
         hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + h.scenario + (h.variant ? ' (' + h.variant + ')' : '') + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
-        '</tbody></table>') +
+        '</tbody></table></div>') +
       '</div>' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--primary" onclick="saveStudentData();toast(\'Données enregistrées pour l\\\'enseignant ✅\')">💾 Enregistrer mes données pour l\'enseignant</button><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
   }
@@ -915,7 +934,7 @@
       html += '<tr><th>Date de fin</th><td>' + (d.dateFin || "—") + '</td></tr>';
       html += '<tr><th>Objectifs de l’élève</th><td>' + (d.objectifsEleve || "—") + '</td></tr>';
       html += '<tr><th>Objectifs du tuteur</th><td>' + (d.objectifsTuteur || "—") + '</td></tr>';
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
     });
     html += '<script>window.print();</script></body></html>';
     w.document.write(html);
@@ -1013,10 +1032,10 @@
       '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="importAccounts()">📥 Importer une liste</button></div>' +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📋 Comptes existants (' + accounts.length + ')</h4>' +
       (accounts.length === 0 ? '<p class="muted">Aucun compte créé.</p>' :
-        '<table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Niveau</th><th>Classe</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Niveau</th><th>Classe</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
         accounts.map(function (a) {
           return '<tr><td><code>' + a.login + '</code></td><td>' + a.prenom + ' ' + a.nom + '</td><td>' + (a.niveau === "2" ? "2de" : a.niveau === "1" ? "1re" : "Tle") + '</td><td>' + (a.classe || "—") + '</td><td style="font-size:.75rem;">' + a.created + '</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-border);" onclick="resetPwd(\'' + a.id + '\')">🔄 Reset mdp</button><button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="deleteAccount(\'' + a.id + '\')">🗑️</button></td></tr>';
-        }).join("") + '</tbody></table>');
+        }).join("") + '</tbody></table></div>');
   }
 
   window.createAccount = function () {
@@ -1108,12 +1127,12 @@
       '<div id="newTeacherResult" style="margin-top:10px;"></div></div>' +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📋 Comptes existants (' + accounts.length + ')</h4>' +
       (accounts.length === 0 ? '<p class="muted">Aucun compte.</p>' :
-        '<table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Rôle</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
         accounts.map(function (a) {
           return '<tr><td><code>' + a.login + '</code></td><td>' + a.prenom + ' ' + a.nom + '</td><td>' + a.role + '</td><td style="font-size:.75rem;">' + a.created + '</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-border);" onclick="resetTeacherPwd(\'' + a.id + '\')">🔄 Reset mdp</button>' +
             (a.id !== "t_default" ? '<button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="deleteTeacherAccount(\'' + a.id + '\')">🗑️</button>' : '') +
             '</td></tr>';
-        }).join("") + '</tbody></table>');
+        }).join("") + '</tbody></table></div>');
   }
   window.createTeacherAccount = function () {
     var prenom = document.getElementById("newTeacherPrenom").value.trim();
@@ -1239,12 +1258,12 @@
       '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--sm btn--accent" onclick="importEleveData()">📥 Importer données élève (JSON)</button><button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="renderTeacherTab(\'suivi\')">🔄 Actualiser</button></div>' +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">👥 Élèves enregistrés (' + Object.keys(students).length + ')</h4>' +
       (Object.keys(students).length === 0 ? '<p class="muted">Aucun élève enregistré. Demande aux élèves de cliquer sur "💾 Enregistrer mes données" dans leur tableau de bord.</p>' :
-        '<table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Scénarios réalisés</th><th>Dernier enregistrement</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Élève</th><th>Identifiant</th><th>Compétences ≥2</th><th>Scénarios réalisés</th><th>Dernier enregistrement</th></tr></thead><tbody>' + studentRows + '</tbody></table></div>') +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📜 Scénarios réalisés (élève connecté)</h4>' +
       (hist.length === 0 ? '<p class="muted">Aucun scénario réalisé.</p>' :
-        '<table class="table"><thead><tr><th>Date</th><th>Élève</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Élève</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
         hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + (h.user || "—") + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
-        '</tbody></table>');
+        '</tbody></table></div>');
   }
 
   function loadStudentsData() {
@@ -1314,9 +1333,9 @@
   function renderScenariosTab(c) {
     c.innerHTML = '<h3 style="color:var(--c-primary);">🎬 Scénarios disponibles (' + D.SCENARIOS.length + ')</h3>' +
       '<p class="muted">Liste des scénarios du MVP. Éditable dans js/data.js.</p>' +
-      '<table class="table"><thead><tr><th>ID</th><th>Titre</th><th>Bloc</th><th>Année</th><th>Contexte</th><th>Durée</th><th>Diff.</th></tr></thead><tbody>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Titre</th><th>Bloc</th><th>Année</th><th>Contexte</th><th>Durée</th><th>Diff.</th></tr></thead><tbody>' +
       D.SCENARIOS.map(function (s) { return '<tr><td>' + s.id + '</td><td>' + s.titre + '</td><td>' + s.bloc + '</td><td>' + (s.annee === "2" ? "2de" : s.annee === "1" ? "1re" : "Tle") + '</td><td>' + s.contexte + '</td><td>' + s.duree + '</td><td>' + (s.difficulte || 1) + '</td></tr>'; }).join("") +
-      '</tbody></table>';
+      '</tbody></table></div>';
   }
 
   function loadTuteurEvals() {
@@ -1405,11 +1424,11 @@
       '<button class="btn btn--primary btn--sm" style="margin-top:10px;" onclick="saveTuteurEval()">Enregistrer eval. tuteur pour ' + studentName + '</button></div>' +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">Competences : eleve vs tuteur \u2014 ' + studentName + '</h4>' +
       '<p class="muted" style="font-size:.8rem;">Niveau eleve (autoevaluation) vs niveau tuteur. Ecart positif = eleve plus optimiste.</p>' +
-      '<table class="table"><thead><tr><th>Competence</th><th>Bloc</th><th>Eleve</th><th>Tuteur</th><th>Ecart</th></tr></thead><tbody>' + compRows + '</tbody></table>' +
+      '<div class="table-wrap"><table class="table"><thead><tr><th>Competence</th><th>Bloc</th><th>Eleve</th><th>Tuteur</th><th>Ecart</th></tr></thead><tbody>' + compRows + '</tbody></table></div>' +
       '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--primary btn--sm" onclick="saveTuteurCompetences()">Enregistrer eval. competences tuteur</button></div>' +
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">Suivi des eleves importes (' + Object.keys(students).length + ')</h4>' +
       (Object.keys(students).length === 0 ? '<p class="muted">Aucun eleve importe. Utilise "Importer donnees eleve" dans l\'onglet Suivi.</p>' :
-        '<table class="table"><thead><tr><th>Eleve</th><th>Identifiant</th><th>Competences >=2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table>') +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Eleve</th><th>Identifiant</th><th>Competences >=2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table></div>') +
       '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">Exporter bilan PDF</button></div>';
     var sel = document.getElementById("bilanStudentSelect");
     if (sel) sel.addEventListener("change", function () {
@@ -1486,7 +1505,7 @@
     comps.forEach(function (cp) {
       html += '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td style="text-align:center;font-weight:700;">' + (prog[cp.id] || 0) + '/3</td></tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     // Section 2: Evaluation tuteur par competence
     html += '<h2>2. Évaluation tuteur par compétence</h2>';
     html += '<table><thead><tr><th>Compétence</th><th>Bloc</th><th>Élève</th><th>Tuteur</th><th>Écart</th></tr></thead><tbody>';
@@ -1499,7 +1518,7 @@
       var colorClass = (tu === undefined) ? "" : (ecart === 0 ? "ok" : (ecart > 0 ? "warn" : "bad"));
       html += '<tr><td>' + cp.id + ' — ' + cp.titre + '</td><td>' + cp.bloc + '</td><td style="text-align:center;">' + el + '/3</td><td style="text-align:center;">' + tuStr + (tu === undefined ? '' : '/3') + '</td><td style="text-align:center;font-weight:700;" class="' + colorClass + '">' + ecartStr + '</td></tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     // Section 3: Evaluation tuteur par critere
     html += '<h2>3. Évaluation tuteur par critère</h2>';
     html += '<table><thead><tr><th>Critère</th><th>Niveau tuteur</th></tr></thead><tbody>';
@@ -1507,7 +1526,7 @@
       var val = tuteurCriteres[cr.id];
       html += '<tr><td>' + cr.label + ' — ' + cr.question + '</td><td style="text-align:center;font-weight:700;">' + (val === undefined ? "—" : val + '/3') + '</td></tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     // Section 4: Autoevaluation eleve
     var autoeval = s.autoeval || {};
     html += '<h2>4. Autoévaluation de l\'élève</h2>';
@@ -1516,7 +1535,7 @@
       var val = autoeval[cr.id];
       html += '<tr><td>' + cr.label + '</td><td style="text-align:center;font-weight:700;">' + (val === undefined ? "—" : val + '/3') + '</td></tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     // Section 5: Historique scenarios
     var hist = s.history || [];
     html += '<h2>5. Scénarios réalisés (' + hist.length + ')</h2>';
@@ -1527,7 +1546,7 @@
       hist.forEach(function (h) {
         html += '<tr><td>' + h.date + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>';
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
     }
     html += '<script>window.print();</script></body></html>';
     w.document.write(html);
