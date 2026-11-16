@@ -416,18 +416,32 @@
   function updateUserBadge() {
     var badge = document.getElementById("userBadge");
     var name = document.getElementById("userName");
-    if (!badge || !name) return;
-    if (AUTH.currentUser) {
-      badge.hidden = false;
-      var u = AUTH.currentUser;
-      var niveau = u.niveau === "2" ? "2de" : u.niveau === "1" ? "1re" : "Tle";
-      name.textContent = u.prenom + " " + u.nom + " · " + niveau;
-    } else {
-      badge.hidden = true;
+    var tBadge = document.getElementById("teacherBadge");
+    var tName = document.getElementById("teacherName");
+    var isTeacher = !!(TEACHER_AUTH && TEACHER_AUTH.currentUser);
+    document.body.classList.toggle("teacher-mode", isTeacher);
+    if (badge) {
+      if (AUTH.currentUser && !isTeacher) {
+        badge.hidden = false;
+        var u = AUTH.currentUser;
+        var niveau = u.niveau === "2" ? "2de" : u.niveau === "1" ? "1re" : "Tle";
+        if (name) name.textContent = u.prenom + " " + u.nom + " · " + niveau;
+      } else {
+        badge.hidden = true;
+      }
+    }
+    if (tBadge) {
+      if (isTeacher) {
+        tBadge.hidden = false;
+        var ta = TEACHER_AUTH.currentUser;
+        if (tName) tName.textContent = (ta.prenom || "") + " " + (ta.nom || "") + " · Enseignant";
+      } else {
+        tBadge.hidden = true;
+      }
     }
     // Masquer l'acces enseignant dans la nav quand un eleve est connecte.
     var teacherBtn = document.querySelector('.nav__btn--accent[data-nav="enseignant"]');
-    if (teacherBtn) teacherBtn.hidden = !!AUTH.currentUser;
+    if (teacherBtn) teacherBtn.hidden = !!AUTH.currentUser || isTeacher;
   }
 
   // ---------- LOGIN ----------
@@ -978,6 +992,7 @@
       STATE.teacherAuth = true;
       var err = document.getElementById("teacherError");
       if (err) err.textContent = "";
+      updateUserBadge();
       renderTeacher();
     } else {
       var err2 = document.getElementById("teacherError");
@@ -1163,6 +1178,7 @@
     TEACHER_AUTH.logout();
     STATE.teacherAuth = false;
     toast("Déconnexion enseignant.");
+    updateUserBadge();
     renderTeacher();
   };
 

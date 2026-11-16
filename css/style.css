@@ -51,6 +51,14 @@ body {
 }
 body.login-mode .nav { display: none !important; }
 body.login-mode .user-badge { display: none !important; }
+body.login-mode .teacher-badge { display: none !important; }
+.teacher-badge {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  font-size: .85rem; font-weight: 600; color: var(--c-primary);
+}
+body.teacher-mode .nav { display: none !important; }
+body.teacher-mode .user-badge { display: none !important; }
+body:not(.teacher-mode) .teacher-badge { display: none !important; }
 .loader {
   position: fixed; inset: 0; z-index: 9999;
   background: linear-gradient(135deg, #1e3a5f, #2e7d32);
