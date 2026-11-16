@@ -9,6 +9,7 @@
   var AUTH = {
     currentUser: null,
     accounts: [],
+    deletedIds: [],
     hash: function (s) { return btoa(unescape(encodeURIComponent("simassp::" + s))); },
     loadAccounts: async function () {
       var cached = [];
@@ -23,8 +24,11 @@
             var merged = accounts.slice();
             var ids = merged.map(function (a) { return a.id; });
             (cached || []).forEach(function (c) {
+              if (AUTH.deletedIds.indexOf(c.id) !== -1) return;
               if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
             });
+            // Filter out deleted
+            merged = merged.filter(function (a) { return AUTH.deletedIds.indexOf(a.id) === -1; });
             try { localStorage.setItem("simassp_accounts", JSON.stringify(merged)); } catch (e) {}
             return merged;
           }
@@ -111,8 +115,9 @@
       var acc = null;
       for (var i = 0; i < AUTH.accounts.length; i++) { if (AUTH.accounts[i].id === id) { acc = AUTH.accounts[i]; break; } }
       var login = acc ? acc.login : null;
+      if (AUTH.deletedIds.indexOf(id) === -1) AUTH.deletedIds.push(id);
       AUTH.accounts = AUTH.accounts.filter(function (a) { return a.id !== id; });
-      AUTH.saveAccounts();
+      try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
       try { localStorage.removeItem("simassp_progress_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_autoeval_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_history_" + id); } catch (e) {}
@@ -151,8 +156,10 @@
     var merged = (acc || []).slice();
     var ids = merged.map(function (a) { return a.id; });
     (AUTH.accounts || []).forEach(function (c) {
+      if (AUTH.deletedIds.indexOf(c.id) !== -1) return;
       if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
     });
+    merged = merged.filter(function (a) { return AUTH.deletedIds.indexOf(a.id) === -1; });
     AUTH.accounts = merged;
   }).catch(function () { /* keep in-memory accounts */ });
 
@@ -160,6 +167,7 @@
   var TEACHER_AUTH = {
     currentUser: null,
     accounts: [],
+    deletedIds: [],
     hash: AUTH.hash,
     loadAccounts: async function () {
       var cached = [];
@@ -172,8 +180,10 @@
             var merged = accounts.slice();
             var ids = merged.map(function (a) { return a.id; });
             (cached || []).forEach(function (c) {
+              if (TEACHER_AUTH.deletedIds.indexOf(c.id) !== -1) return;
               if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
             });
+            merged = merged.filter(function (a) { return TEACHER_AUTH.deletedIds.indexOf(a.id) === -1; });
             try { localStorage.setItem("simassp_teachers", JSON.stringify(merged)); } catch (e) {}
             return merged;
           }
@@ -239,7 +249,9 @@
       return pwd;
     },
     deleteAccount: function (id) {
+      if (TEACHER_AUTH.deletedIds.indexOf(id) === -1) TEACHER_AUTH.deletedIds.push(id);
       TEACHER_AUTH.accounts = TEACHER_AUTH.accounts.filter(function (a) { return a.id !== id; });
+      try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
       TEACHER_AUTH.saveAccounts();
       if (window.Storage) { window.Storage.remove("teachers", id).catch(function () {}); }
     }
@@ -249,8 +261,10 @@
     var merged = (acc || []).slice();
     var ids = merged.map(function (a) { return a.id; });
     (TEACHER_AUTH.accounts || []).forEach(function (c) {
+      if (TEACHER_AUTH.deletedIds.indexOf(c.id) !== -1) return;
       if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
     });
+    merged = merged.filter(function (a) { return TEACHER_AUTH.deletedIds.indexOf(a.id) === -1; });
     TEACHER_AUTH.accounts = merged;
   }).catch(function () { /* keep in-memory accounts */ });
   // compte par defaut
@@ -1230,9 +1244,10 @@
     }
   };
 
-  window.deleteAccount = function (id) {
+  window.deleteAccount = async function (id) {
     if (!confirm("Supprimer ce compte et sa progression ?")) return;
     AUTH.deleteAccount(id);
+    await AUTH.saveAccounts();
     toast("Compte supprimé.");
     renderTeacherTab("comptes");
   };
@@ -1898,8 +1913,26 @@
       window.SB_SUBSCRIBE(function (payload) {
         var ns = payload && payload.new && payload.new.namespace;
         if (ns === "accounts" || ns === "teachers") {
-          AUTH.loadAccounts().then(function (a) { AUTH.accounts = a || []; }).catch(function () {});
-          TEACHER_AUTH.loadAccounts().then(function (a) { TEACHER_AUTH.accounts = a || []; }).catch(function () {});
+          AUTH.loadAccounts().then(function (a) {
+            var merged = (a || []).slice();
+            var ids = merged.map(function (x) { return x.id; });
+            (AUTH.accounts || []).forEach(function (c) {
+              if (AUTH.deletedIds.indexOf(c.id) !== -1) return;
+              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+            });
+            merged = merged.filter(function (x) { return AUTH.deletedIds.indexOf(x.id) === -1; });
+            AUTH.accounts = merged;
+          }).catch(function () {});
+          TEACHER_AUTH.loadAccounts().then(function (a) {
+            var merged = (a || []).slice();
+            var ids = merged.map(function (x) { return x.id; });
+            (TEACHER_AUTH.accounts || []).forEach(function (c) {
+              if (TEACHER_AUTH.deletedIds.indexOf(c.id) !== -1) return;
+              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+            });
+            merged = merged.filter(function (x) { return TEACHER_AUTH.deletedIds.indexOf(x.id) === -1; });
+            TEACHER_AUTH.accounts = merged;
+          }).catch(function () {});
         }
       });
     }
