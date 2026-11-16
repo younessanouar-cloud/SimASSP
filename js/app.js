@@ -10,12 +10,35 @@
     currentUser: null,
     accounts: [],
     hash: function (s) { return btoa(unescape(encodeURIComponent("simassp::" + s))); },
-    loadAccounts: function () {
-      try { return JSON.parse(localStorage.getItem("simassp_accounts") || "[]"); }
-      catch (e) { return []; }
+    loadAccounts: async function () {
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem("simassp_accounts") || "[]"); } catch (e) { cached = []; }
+      // Essayer Supabase
+      if (window.Storage) {
+        try {
+          var rows = await window.Storage.getAll("accounts");
+          if (rows && rows.length > 0) {
+            // Reconstruire le tableau d'accounts depuis les lignes
+            var accounts = rows.map(function (r) { return r.data; });
+            try { localStorage.setItem("simassp_accounts", JSON.stringify(accounts)); } catch (e) {}
+            return accounts;
+          }
+        } catch (e) { console.warn("loadAccounts SB:", e && e.message); }
+      }
+      return cached || [];
     },
-    saveAccounts: function () {
-      localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts));
+    saveAccounts: async function () {
+      // Sauvegarder chaque account comme une ligne
+      if (window.Storage) {
+        try {
+          // Supprimer les anciens
+          // On upsert chaque account
+          for (var i = 0; i < AUTH.accounts.length; i++) {
+            await window.Storage.set("accounts", AUTH.accounts[i].id, AUTH.accounts[i]);
+          }
+        } catch (e) { console.warn("saveAccounts SB:", e && e.message); }
+      }
+      try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
     },
     genPassword: function () {
       var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
@@ -83,23 +106,48 @@
       try { localStorage.removeItem("simassp_progress_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_autoeval_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_history_" + id); } catch (e) {}
+      if (window.Storage) {
+        window.Storage.remove("progress", id).catch(function () {});
+        window.Storage.remove("autoeval", id).catch(function () {});
+        window.Storage.remove("history", id).catch(function () {});
+        window.Storage.remove("accounts", id).catch(function () {});
+      }
     }
   };
 
   // charger les comptes
-  AUTH.accounts = AUTH.loadAccounts();
+  AUTH.accounts = [];
+  AUTH.loadAccounts().then(function (acc) { AUTH.accounts = acc || []; }).catch(function () { AUTH.accounts = []; });
 
   // ---------- COMPTES ENSEIGNANTS / TUTEURS ----------
   var TEACHER_AUTH = {
     currentUser: null,
     accounts: [],
     hash: AUTH.hash,
-    loadAccounts: function () {
-      try { return JSON.parse(localStorage.getItem("simassp_teachers") || "[]"); }
-      catch (e) { return []; }
+    loadAccounts: async function () {
+      var cached = [];
+      try { cached = JSON.parse(localStorage.getItem("simassp_teachers") || "[]"); } catch (e) { cached = []; }
+      if (window.Storage) {
+        try {
+          var rows = await window.Storage.getAll("teachers");
+          if (rows && rows.length > 0) {
+            var accounts = rows.map(function (r) { return r.data; });
+            try { localStorage.setItem("simassp_teachers", JSON.stringify(accounts)); } catch (e) {}
+            return accounts;
+          }
+        } catch (e) { console.warn("loadTeachers SB:", e && e.message); }
+      }
+      return cached || [];
     },
-    saveAccounts: function () {
-      localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts));
+    saveAccounts: async function () {
+      if (window.Storage) {
+        try {
+          for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
+            await window.Storage.set("teachers", TEACHER_AUTH.accounts[i].id, TEACHER_AUTH.accounts[i]);
+          }
+        } catch (e) { console.warn("saveTeachers SB:", e && e.message); }
+      }
+      try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
     },
     genPassword: AUTH.genPassword,
     genLogin: function (prenom, nom) {
@@ -149,9 +197,11 @@
     deleteAccount: function (id) {
       TEACHER_AUTH.accounts = TEACHER_AUTH.accounts.filter(function (a) { return a.id !== id; });
       TEACHER_AUTH.saveAccounts();
+      if (window.Storage) { window.Storage.remove("teachers", id).catch(function () {}); }
     }
   };
-  TEACHER_AUTH.accounts = TEACHER_AUTH.loadAccounts();
+  TEACHER_AUTH.accounts = [];
+  TEACHER_AUTH.loadAccounts().then(function (acc) { TEACHER_AUTH.accounts = acc || []; }).catch(function () { TEACHER_AUTH.accounts = []; });
   // compte par defaut
   if (TEACHER_AUTH.accounts.length === 0) {
     TEACHER_AUTH.accounts.push({
@@ -170,25 +220,68 @@
     return base + "_" + uid;
   }
   function loadProgression() {
-    try { return JSON.parse(localStorage.getItem(userKey("simassp_progress")) || "{}"); }
-    catch (e) { return {}; }
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    // Cache local synchrone
+    var cached = {};
+    try { cached = JSON.parse(localStorage.getItem("simassp_progress_" + uid) || "{}"); } catch (e) { cached = {}; }
+    // Supabase async (mise a jour du cache en arriere-plan)
+    if (window.Storage) {
+      window.Storage.get("progress", uid).then(function (d) {
+        if (d) {
+          try { STATE.progression = d; localStorage.setItem("simassp_progress_" + uid, JSON.stringify(d)); } catch (e) {}
+          try { renderProgression && renderProgression(); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function saveProgression() {
-    localStorage.setItem(userKey("simassp_progress"), JSON.stringify(STATE.progression));
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    try { localStorage.setItem("simassp_progress_" + uid, JSON.stringify(STATE.progression)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("progress", uid, STATE.progression).catch(function () {});
+    }
   }
   function loadAutoeval() {
-    try { return JSON.parse(localStorage.getItem(userKey("simassp_autoeval")) || "{}"); }
-    catch (e) { return {}; }
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    var cached = {};
+    try { cached = JSON.parse(localStorage.getItem("simassp_autoeval_" + uid) || "{}"); } catch (e) { cached = {}; }
+    if (window.Storage) {
+      window.Storage.get("autoeval", uid).then(function (d) {
+        if (d) {
+          try { STATE.autoeval = d; localStorage.setItem("simassp_autoeval_" + uid, JSON.stringify(d)); } catch (e) {}
+          try { renderAutoeval && renderAutoeval(); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function saveAutoeval() {
-    localStorage.setItem(userKey("simassp_autoeval"), JSON.stringify(STATE.autoeval));
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    try { localStorage.setItem("simassp_autoeval_" + uid, JSON.stringify(STATE.autoeval)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("autoeval", uid, STATE.autoeval).catch(function () {});
+    }
   }
   function loadHistory() {
-    try { return JSON.parse(localStorage.getItem(userKey("simassp_history")) || "[]"); }
-    catch (e) { return []; }
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    var cached = [];
+    try { cached = JSON.parse(localStorage.getItem("simassp_history_" + uid) || "[]"); } catch (e) { cached = []; }
+    if (window.Storage) {
+      window.Storage.get("history", uid).then(function (d) {
+        if (d) {
+          try { localStorage.setItem("simassp_history_" + uid, JSON.stringify(d)); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function saveHistory(hist) {
-    localStorage.setItem(userKey("simassp_history"), JSON.stringify(hist));
+    var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    try { localStorage.setItem("simassp_history_" + uid, JSON.stringify(hist)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("history", uid, hist).catch(function () {});
+    }
   }
 
   // ---------- PFMP ----------
@@ -201,11 +294,22 @@
     { id: "PFMP6", niveau: "T", numero: 2, titre: "PFMP 6 — Terminale — Période 2", objectifs: "Projet individualisé complet, éducation à la santé, démarche qualité et autonomie." }
   ];
   function loadPFMP() {
-    try { return JSON.parse(localStorage.getItem("simassp_pfmp") || "{}"); }
-    catch (e) { return {}; }
+    var cached = {};
+    try { cached = JSON.parse(localStorage.getItem("simassp_pfmp") || "{}"); } catch (e) { cached = {}; }
+    if (window.Storage) {
+      window.Storage.get("pfmp", "global").then(function (d) {
+        if (d) {
+          try { localStorage.setItem("simassp_pfmp", JSON.stringify(d)); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function savePFMP(obj) {
-    localStorage.setItem("simassp_pfmp", JSON.stringify(obj));
+    try { localStorage.setItem("simassp_pfmp", JSON.stringify(obj)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("pfmp", "global", obj).catch(function () {});
+    }
   }
   function getPFMPData(login) {
     var all = loadPFMP();
@@ -628,6 +732,7 @@
   window.resetAutoeval = function () {
     STATE.autoeval = {};
     try { localStorage.removeItem(userKey("simassp_autoeval")); } catch (e) {}
+    if (window.Storage) { window.Storage.remove("autoeval", AUTH.currentUser ? AUTH.currentUser.id : "anon").catch(function () {}); }
     renderAutoeval();
     toast("Réinitialisé");
   };
@@ -644,6 +749,13 @@
   window.compareTuteur = function () {
     var tuteur = {};
     try { tuteur = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}"); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.get("tuteur_eval", "global").then(function (d) {
+        if (d) {
+          try { localStorage.setItem("simassp_tuteur_eval", JSON.stringify(d)); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
     var c = document.getElementById("compareContainer");
     if (!c) return;
     if (Object.keys(tuteur).length === 0) {
@@ -1136,11 +1248,22 @@
   }
 
   function loadStudentsData() {
-    try { return JSON.parse(localStorage.getItem("simassp_students_data") || "{}"); }
-    catch (e) { return {}; }
+    var cached = {};
+    try { cached = JSON.parse(localStorage.getItem("simassp_students_data") || "{}"); } catch (e) { cached = {}; }
+    if (window.Storage) {
+      window.Storage.get("students_data", "global").then(function (d) {
+        if (d) {
+          try { localStorage.setItem("simassp_students_data", JSON.stringify(d)); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function saveStudentsData(obj) {
-    localStorage.setItem("simassp_students_data", JSON.stringify(obj));
+    try { localStorage.setItem("simassp_students_data", JSON.stringify(obj)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("students_data", "global", obj).catch(function () {});
+    }
   }
   window.importEleveData = function () {
     var input = document.createElement("input");
@@ -1197,11 +1320,22 @@
   }
 
   function loadTuteurEvals() {
-    try { return JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "{}"); }
-    catch (e) { return {}; }
+    var cached = {};
+    try { cached = JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "{}"); } catch (e) { cached = {}; }
+    if (window.Storage) {
+      window.Storage.get("tuteur_evals", "global").then(function (d) {
+        if (d) {
+          try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(d)); } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+    return cached;
   }
   function saveTuteurEvals(obj) {
-    localStorage.setItem("simassp_tuteur_evals", JSON.stringify(obj));
+    try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(obj)); } catch (e) {}
+    if (window.Storage) {
+      window.Storage.set("tuteur_evals", "global", obj).catch(function () {});
+    }
   }
   if (STATE.bilanSelectedStudent === undefined) STATE.bilanSelectedStudent = null;
   function renderBilansTab(c) {
@@ -1320,6 +1454,7 @@
     }
     // compatibilite avec l'ancien stockage global
     localStorage.setItem("simassp_tuteur_eval", JSON.stringify(obj));
+    if (window.Storage) { window.Storage.set("tuteur_eval", "global", obj).catch(function () {}); }
     toast("Évaluation tuteur enregistrée 👩‍🏫");
   };
 
@@ -1432,8 +1567,86 @@
   if (backdrop) backdrop.addEventListener("click", function () { var m = document.getElementById("modal"); if (m) m.hidden = true; });
 
   // ---------- INIT ----------
-  function init() {
+  async function init() {
     try { window.showView = showView; } catch (e) { console.error("showView", e); }
+    // Attendre Supabase
+    if (window.SB_READY) { try { await window.SB_READY; } catch (e) {} }
+    // Charger les comptes depuis Supabase (ou cache local)
+    try {
+      var acc = await AUTH.loadAccounts();
+      AUTH.accounts = acc || [];
+    } catch (e) { AUTH.accounts = []; }
+    try {
+      var tacc = await TEACHER_AUTH.loadAccounts();
+      TEACHER_AUTH.accounts = tacc || [];
+    } catch (e) { TEACHER_AUTH.accounts = []; }
+    // Compte enseignant par defaut si aucun
+    if (TEACHER_AUTH.accounts.length === 0) {
+      TEACHER_AUTH.accounts.push({
+        id: "t_default",
+        login: "enseignant",
+        passwordHash: TEACHER_AUTH.hash("ecbg2026"),
+        prenom: "Enseignant", nom: "", role: "enseignant",
+        created: new Date().toLocaleString("fr-FR")
+      });
+      TEACHER_AUTH.saveAccounts();
+    }
+    // Migration one-time : copier les donnees localStorage vers Supabase
+    (async function migrateLocalStorage() {
+      try {
+        if (localStorage.getItem("simassp_migrated_to_supabase") === "1") return;
+        if (!window.Storage) return;
+        if (!(await window.SB_READY)) return;
+        // accounts
+        var acc = [];
+        try { acc = JSON.parse(localStorage.getItem("simassp_accounts") || "[]"); } catch (e) { acc = []; }
+        for (var i = 0; i < acc.length; i++) { await window.Storage.set("accounts", acc[i].id, acc[i]); }
+        // teachers
+        var tch = [];
+        try { tch = JSON.parse(localStorage.getItem("simassp_teachers") || "[]"); } catch (e) { tch = []; }
+        for (var j = 0; j < tch.length; j++) { await window.Storage.set("teachers", tch[j].id, tch[j]); }
+        // pfmp
+        var pfmp = null;
+        try { pfmp = JSON.parse(localStorage.getItem("simassp_pfmp") || "null"); } catch (e) { pfmp = null; }
+        if (pfmp) await window.Storage.set("pfmp", "global", pfmp);
+        // students_data
+        var sd = null;
+        try { sd = JSON.parse(localStorage.getItem("simassp_students_data") || "null"); } catch (e) { sd = null; }
+        if (sd) await window.Storage.set("students_data", "global", sd);
+        // tuteur_evals
+        var te = null;
+        try { te = JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "null"); } catch (e) { te = null; }
+        if (te) await window.Storage.set("tuteur_evals", "global", te);
+        // tuteur_eval
+        var t = null;
+        try { t = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "null"); } catch (e) { t = null; }
+        if (t) await window.Storage.set("tuteur_eval", "global", t);
+        // progress/autoeval/history par utilisateur
+        for (var k = 0; k < acc.length; k++) {
+          var uid = acc[k].id;
+          var prog = null, ae = null, hist = null;
+          try { prog = JSON.parse(localStorage.getItem("simassp_progress_" + uid) || "null"); } catch (e) { prog = null; }
+          try { ae = JSON.parse(localStorage.getItem("simassp_autoeval_" + uid) || "null"); } catch (e) { ae = null; }
+          try { hist = JSON.parse(localStorage.getItem("simassp_history_" + uid) || "null"); } catch (e) { hist = null; }
+          if (prog) await window.Storage.set("progress", uid, prog);
+          if (ae) await window.Storage.set("autoeval", uid, ae);
+          if (hist) await window.Storage.set("history", uid, hist);
+        }
+        localStorage.setItem("simassp_migrated_to_supabase", "1");
+      } catch (e) { console.warn("Migration error:", e && e.message); }
+    })();
+
+    // Abonnement temps reel : recharger les comptes quand ils changent
+    if (window.SB_SUBSCRIBE) {
+      window.SB_SUBSCRIBE(function (payload) {
+        var ns = payload && payload.new && payload.new.namespace;
+        if (ns === "accounts" || ns === "teachers") {
+          AUTH.loadAccounts().then(function (a) { AUTH.accounts = a || []; }).catch(function () {});
+          TEACHER_AUTH.loadAccounts().then(function (a) { TEACHER_AUTH.accounts = a || []; }).catch(function () {});
+        }
+      });
+    }
+
     try {
       if (AUTH.restoreSession()) {
         STATE.progression = loadProgression();
