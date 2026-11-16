@@ -11,17 +11,22 @@
     accounts: [],
     hash: function (s) { return btoa(unescape(encodeURIComponent("simassp::" + s))); },
     loadAccounts: async function () {
-      var cached = null;
+      var cached = [];
       try { cached = JSON.parse(localStorage.getItem("simassp_accounts") || "[]"); } catch (e) { cached = []; }
       // Essayer Supabase
       if (window.Storage) {
         try {
           var rows = await window.Storage.getAll("accounts");
           if (rows && rows.length > 0) {
-            // Reconstruire le tableau d'accounts depuis les lignes
             var accounts = rows.map(function (r) { return r.data; });
-            try { localStorage.setItem("simassp_accounts", JSON.stringify(accounts)); } catch (e) {}
-            return accounts;
+            // Fusionner avec le cache local pour ne pas perdre les comptes ajoutes entre-temps
+            var merged = accounts.slice();
+            var ids = merged.map(function (a) { return a.id; });
+            (cached || []).forEach(function (c) {
+              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+            });
+            try { localStorage.setItem("simassp_accounts", JSON.stringify(merged)); } catch (e) {}
+            return merged;
           }
         } catch (e) { console.warn("loadAccounts SB:", e && e.message); }
       }
@@ -142,7 +147,14 @@
 
   // charger les comptes
   AUTH.accounts = [];
-  AUTH.loadAccounts().then(function (acc) { AUTH.accounts = acc || []; }).catch(function () { AUTH.accounts = []; });
+  AUTH.loadAccounts().then(function (acc) {
+    var merged = (acc || []).slice();
+    var ids = merged.map(function (a) { return a.id; });
+    (AUTH.accounts || []).forEach(function (c) {
+      if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+    });
+    AUTH.accounts = merged;
+  }).catch(function () { /* keep in-memory accounts */ });
 
   // ---------- COMPTES ENSEIGNANTS / TUTEURS ----------
   var TEACHER_AUTH = {
@@ -157,8 +169,13 @@
           var rows = await window.Storage.getAll("teachers");
           if (rows && rows.length > 0) {
             var accounts = rows.map(function (r) { return r.data; });
-            try { localStorage.setItem("simassp_teachers", JSON.stringify(accounts)); } catch (e) {}
-            return accounts;
+            var merged = accounts.slice();
+            var ids = merged.map(function (a) { return a.id; });
+            (cached || []).forEach(function (c) {
+              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+            });
+            try { localStorage.setItem("simassp_teachers", JSON.stringify(merged)); } catch (e) {}
+            return merged;
           }
         } catch (e) { console.warn("loadTeachers SB:", e && e.message); }
       }
@@ -228,7 +245,14 @@
     }
   };
   TEACHER_AUTH.accounts = [];
-  TEACHER_AUTH.loadAccounts().then(function (acc) { TEACHER_AUTH.accounts = acc || []; }).catch(function () { TEACHER_AUTH.accounts = []; });
+  TEACHER_AUTH.loadAccounts().then(function (acc) {
+    var merged = (acc || []).slice();
+    var ids = merged.map(function (a) { return a.id; });
+    (TEACHER_AUTH.accounts || []).forEach(function (c) {
+      if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
+    });
+    TEACHER_AUTH.accounts = merged;
+  }).catch(function () { /* keep in-memory accounts */ });
   // compte par defaut
   if (TEACHER_AUTH.accounts.length === 0) {
     TEACHER_AUTH.accounts.push({
