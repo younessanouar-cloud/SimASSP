@@ -1721,7 +1721,7 @@
       '</div>'
     );
   };
-  window.changePasswordNow = function (isTeacher) {
+  window.changePasswordNow = async function (isTeacher) {
     var p1 = document.getElementById("cp_new").value;
     var p2 = document.getElementById("cp_confirm").value;
     if (!p1 || p1.length < 4) { toast("Mot de passe trop court (4 caractères min)."); return; }
@@ -1730,7 +1730,7 @@
       var acc = TEACHER_AUTH.currentUser;
       acc.passwordHash = TEACHER_AUTH.hash(p1);
       acc.mustChangePassword = false;
-      TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccounts();
       STATE.forcePasswordChange = false;
       closeModal();
       toast("Mot de passe modifié ✅");
@@ -1740,7 +1740,7 @@
       var acc2 = AUTH.currentUser;
       acc2.passwordHash = AUTH.hash(p1);
       acc2.mustChangePassword = false;
-      AUTH.saveAccounts();
+      await AUTH.saveAccounts();
       STATE.forcePasswordChange = false;
       closeModal();
       toast("Mot de passe modifié ✅");
