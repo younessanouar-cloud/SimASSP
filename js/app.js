@@ -101,11 +101,34 @@
       return pwd;
     },
     deleteAccount: function (id) {
+      var acc = null;
+      for (var i = 0; i < AUTH.accounts.length; i++) { if (AUTH.accounts[i].id === id) { acc = AUTH.accounts[i]; break; } }
+      var login = acc ? acc.login : null;
       AUTH.accounts = AUTH.accounts.filter(function (a) { return a.id !== id; });
       AUTH.saveAccounts();
       try { localStorage.removeItem("simassp_progress_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_autoeval_" + id); } catch (e) {}
       try { localStorage.removeItem("simassp_history_" + id); } catch (e) {}
+      if (login) {
+        try {
+          var sd = JSON.parse(localStorage.getItem("simassp_students_data") || "{}");
+          delete sd[login];
+          localStorage.setItem("simassp_students_data", JSON.stringify(sd));
+          if (window.Storage) window.Storage.set("students_data", "global", sd).catch(function () {});
+        } catch (e) {}
+        try {
+          var pd = JSON.parse(localStorage.getItem("simassp_pfmp") || "{}");
+          delete pd[login];
+          localStorage.setItem("simassp_pfmp", JSON.stringify(pd));
+          if (window.Storage) window.Storage.set("pfmp", "global", pd).catch(function () {});
+        } catch (e) {}
+        try {
+          var ted = JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "{}");
+          delete ted[login];
+          localStorage.setItem("simassp_tuteur_evals", JSON.stringify(ted));
+          if (window.Storage) window.Storage.set("tuteur_evals", "global", ted).catch(function () {});
+        } catch (e) {}
+      }
       if (window.Storage) {
         window.Storage.remove("progress", id).catch(function () {});
         window.Storage.remove("autoeval", id).catch(function () {});
@@ -989,7 +1012,7 @@
     var w = window.open("", "_blank");
     var login = STATE.pfmpSelectedStudent || (AUTH.currentUser ? AUTH.currentUser.login : null);
     if (!login) { toast("Aucun élève sélectionné."); return; }
-    var students = loadStudentsData();
+    var students = loadActiveStudentsData();
     var s = students[login] || {};
     var name = s.name || login;
     var niveau = s.niveau || (AUTH.currentUser ? AUTH.currentUser.niveau : "2");
@@ -1247,7 +1270,7 @@
 
   if (STATE.pfmpSelectedStudent === undefined) STATE.pfmpSelectedStudent = null;
   function renderPFMPTab(c) {
-    var students = loadStudentsData();
+    var students = loadActiveStudentsData();
     var logins = Object.keys(students);
     var u = AUTH.currentUser;
     if (u && !students[u.login]) {
@@ -1323,7 +1346,9 @@
 
   function renderSuiviTab(c) {
     var hist = loadHistory();
-    var students = loadStudentsData();
+    var students = loadActiveStudentsData();
+    var activeLogins = Object.keys(students);
+    hist = hist.filter(function (h) { return !h.user || activeLogins.indexOf(h.user) !== -1; });
     var studentRows = Object.keys(students).map(function (login) {
       var s = students[login];
       var sprog = s.progression || {};
@@ -1362,6 +1387,15 @@
     if (window.Storage) {
       window.Storage.set("students_data", "global", obj).catch(function () {});
     }
+  }
+  function loadActiveStudentsData() {
+    var data = loadStudentsData();
+    var active = {};
+    var logins = (AUTH.accounts || []).map(function (a) { return a.login; });
+    Object.keys(data).forEach(function (l) {
+      if (logins.indexOf(l) !== -1) active[l] = data[l];
+    });
+    return active;
   }
   window.importEleveData = function () {
     var input = document.createElement("input");
@@ -1438,7 +1472,7 @@
   if (STATE.bilanSelectedStudent === undefined) STATE.bilanSelectedStudent = null;
   function renderBilansTab(c) {
     var comps = D.COMPETENCES;
-    var students = loadStudentsData();
+    var students = loadActiveStudentsData();
     var logins = Object.keys(students);
     var u = AUTH.currentUser;
     if (u && !students[u.login]) {
@@ -1558,7 +1592,7 @@
 
   window.exportBilanPDF = function () {
     var w = window.open("", "_blank");
-    var students = loadStudentsData();
+    var students = loadActiveStudentsData();
     var login = STATE.bilanSelectedStudent;
     var s = students[login] || {};
     var prog = s.progression || STATE.progression;
