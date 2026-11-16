@@ -363,6 +363,7 @@
     }
     STATE.view = name;
     document.body.classList.toggle("login-mode", name === "login");
+    document.body.classList.toggle("enseignant-view", name === "enseignant");
     var els = document.querySelectorAll(".view");
     for (var i = 0; i < els.length; i++) els[i].classList.remove("view--active");
     var el = document.getElementById("view-" + name);

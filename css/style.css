@@ -57,6 +57,8 @@ body.login-mode .teacher-badge { display: none !important; }
   font-size: .85rem; font-weight: 600; color: var(--c-primary);
 }
 body.teacher-mode .nav { display: none !important; }
+body.enseignant-view .nav { display: none !important; }
+body.enseignant-view .user-badge { display: none !important; }
 body.teacher-mode .user-badge { display: none !important; }
 body:not(.teacher-mode) .teacher-badge { display: none !important; }
 .loader {
