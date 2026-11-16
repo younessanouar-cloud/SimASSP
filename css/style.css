@@ -49,14 +49,14 @@ body {
   display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap;
 }
 .user-badge {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
   font-size: .85rem; font-weight: 600; color: var(--c-primary);
 }
 body.login-mode .nav { display: none !important; }
 body.login-mode .user-badge { display: none !important; }
 body.login-mode .teacher-badge { display: none !important; }
 .teacher-badge {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
   font-size: .85rem; font-weight: 600; color: var(--c-primary);
 }
 body.teacher-mode .nav { display: none !important; }
@@ -87,12 +87,12 @@ body:not(.teacher-mode) .teacher-badge { display: none !important; }
   box-shadow: 0 2px 12px rgba(30,58,95,.05);
 }
 .topbar__inner {
-  max-width: 1240px; margin: 0 auto; padding: 10px 20px;
+  max-width: 1240px; margin: 0 auto; padding: 10px 20px 10px 32px;
   display: flex; align-items: center; gap: 16px;
 }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--c-primary); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--c-primary); white-space: nowrap; }
 .brand__name { font-weight: 800; font-size: 1.25rem; letter-spacing: -.5px; }
-.brand__tag { font-size: .7rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--c-accent); color: #fff; }
+.brand__tag { font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; background: var(--c-accent); color: #fff; letter-spacing: .3px; box-shadow: 0 1px 3px rgba(0,0,0,.12); margin-left: 4px; }
 .nav { display: flex; gap: 6px; flex-wrap: wrap; }
 .nav__btn {
   border: none; background: transparent; padding: 8px 12px; border-radius: 999px;
