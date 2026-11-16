@@ -14,10 +14,21 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 
 👉 https://younessanouar-cloud.github.io/SimASSP/
 
+## 🔄 Synchronisation PC ↔ téléphone
+
+SimASSP utilise **Supabase** pour synchroniser les données en temps réel entre tous les appareils :
+- Comptes élèves et enseignants
+- Progression, autoévaluation, historique
+- PFMP (structures, dates, objectifs)
+- Évaluations tuteur et bilans
+
+Les données sont stockées dans le cloud (Supabase, plan gratuit) avec un cache local (localStorage) pour le mode hors-ligne. La migration depuis l'ancien stockage local est automatique au premier démarrage.
+
 ## 🛠️ Stack
 
 - HTML5 / CSS3 / JavaScript vanilla (aucune dépendance, aucune build)
-- Stockage local (localStorage) — données RGPD-friendly, aucune donnée de santé réelle
+- Stockage : **Supabase** (sync temps réel PC ↔ téléphone) avec cache local (localStorage) pour le mode hors-ligne
+- Données RGPD-friendly, aucune donnée de santé réelle
 - Déployable sur GitHub Pages, Hugging Face Spaces (static) ou tout hébergeur statique
 
 ## 📂 Structure
