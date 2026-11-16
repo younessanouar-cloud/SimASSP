@@ -1281,7 +1281,7 @@
     STATE.teacherAuth = false;
     toast("Déconnexion enseignant.");
     updateUserBadge();
-    renderTeacher();
+    showView("login");
   };
 
   if (STATE.pfmpSelectedStudent === undefined) STATE.pfmpSelectedStudent = null;
