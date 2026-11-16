@@ -560,7 +560,8 @@
   function renderScenarios() {
     var list = document.getElementById("scenarioList");
     if (!list) return;
-    list.innerHTML = D.SCENARIOS.map(function (s) {
+    var randomBtn = '<button class="btn btn--accent btn--sm" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="openScenario(D.SCENARIOS[Math.floor(Math.random()*D.SCENARIOS.length)].id)">🎲 Scénario aléatoire</button>';
+    list.innerHTML = randomBtn + D.SCENARIOS.map(function (s) {
       var b = D.BLOCS.filter(function (x) { return x.code === s.bloc; })[0];
       return '<div class="scenario-item ' + (STATE.scenario && STATE.scenario.id === s.id ? 'scenario-item--active' : '') + '" onclick="openScenario(\'' + s.id + '\')">' +
         '<div class="scenario-item__title">' + b.emoji + ' ' + s.titre + '</div>' +
@@ -575,6 +576,23 @@
       renderScenarioPlay();
     }
   }
+  window.speak = function (text) {
+    try {
+      if (!("speechSynthesis" in window)) { toast("Synthèse vocale non supportée par ce navigateur."); return; }
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "fr-FR";
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    } catch (e) { toast("Erreur de lecture vocale."); }
+  };
+  window.speakStep = function () {
+    var s = STATE.scenario;
+    if (!s) return;
+    var step = s.steps[STATE.stepIndex];
+    var txt = s.titre + ". " + (STATE.variant ? STATE.variant.description + ". " : "") + (step ? step.q : "");
+    speak(txt);
+  };
   window.openScenario = function (id, variantIdx) {
     STATE.scenario = null;
     for (var i = 0; i < D.SCENARIOS.length; i++) {
@@ -620,6 +638,7 @@
         '<button class="btn btn--primary" onclick="finishScenario()">✅ Valider et enregistrer</button>' +
         '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="replayScenario()">🔁 Rejouer</button>' +
         (s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="showVariants()">🔀 Variantes</button>' : '') +
+(s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openScenario(STATE.scenario.id, Math.floor(Math.random()*STATE.scenario.variantes.length))">🎲 Variante aléatoire</button>' : '') +
         '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="askMatheo()">🤖 Demander à Mathéo</button>' +
         '</div></div>';
       return;
@@ -638,7 +657,7 @@
       hintHtml +
       '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">' +
       (hints.length ? '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="revealHint()">💡 Indice (' + STATE.hintLevel + '/' + hints.length + ')</button>' : '') +
-      '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="speak(\'' + escapeJs(step.q) + '\')">🔊 Lire</button>' +
+      '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="speakStep()">🔊 Lire</button>' +
       '</div></div></div>';
   }
 
@@ -848,6 +867,45 @@
         hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + h.scenario + (h.variant ? ' (' + h.variant + ')' : '') + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
         '</tbody></table></div>') +
       '</div>' +
+      (function () {
+        var weakComps = comps.filter(function (c) { return (prog[c.id] || 0) <= 1; });
+        var autoeval = loadAutoeval() || {};
+        var weakCrit = D.CRITERES.filter(function (cr) { var v = autoeval[cr.id]; return v !== undefined && v <= 1; });
+        var recScen = [];
+        weakComps.forEach(function (c) {
+          D.SCENARIOS.forEach(function (s) {
+            if (s.competences && s.competences.indexOf(c.id) !== -1 && recScen.indexOf(s) === -1) recScen.push(s);
+          });
+        });
+        var html = '<div class="chart-card"><h3>🎯 Recommandations personnalisées</h3>';
+        if (weakComps.length === 0 && weakCrit.length === 0) {
+          html += '<p class="muted">Bravo ! Aucune compétence faible détectée. Continue à pratiquer pour maintenir ton niveau.</p>';
+        } else {
+          if (weakComps.length) {
+            html += '<p style="font-size:.9rem;margin:0 0 8px;"><strong>Compétences à retravailler :</strong></p><ul style="margin:0 0 10px;padding-left:18px;font-size:.85rem;">';
+            weakComps.forEach(function (c) {
+              html += '<li><strong>' + c.id + '</strong> — ' + c.titre + ' (niveau ' + (prog[c.id] || 0) + '/3)</li>';
+            });
+            html += '</ul>';
+          }
+          if (weakCrit.length) {
+            html += '<p style="font-size:.9rem;margin:0 0 8px;"><strong>Critères autoévalués faibles :</strong></p><ul style="margin:0 0 10px;padding-left:18px;font-size:.85rem;">';
+            weakCrit.forEach(function (cr) { html += '<li>' + cr.label + ' (' + (autoeval[cr.id]) + '/3)</li>'; });
+            html += '</ul>';
+          }
+          if (recScen.length) {
+            html += '<p style="font-size:.9rem;margin:0 0 8px;"><strong>Scénarios recommandés :</strong></p><ul style="margin:0;padding-left:18px;font-size:.85rem;">';
+            recScen.slice(0, 5).forEach(function (s) {
+              html += '<li><button class="btn btn--ghost btn--sm" style="color:var(--c-primary);padding:2px 6px;" onclick="openScenario(\'' + s.id + '\')">' + s.titre + '</button> <span class="muted">(' + s.bloc + ', ' + s.difficulte + '★)</span></li>';
+            });
+            html += '</ul>';
+          } else {
+            html += '<p class="muted">Aucun scénario ciblant ces compétences pour l\'instant.</p>';
+          }
+        }
+        html += '</div>';
+        return html;
+      })() +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--primary" onclick="saveStudentData();toast(\'Données enregistrées pour l\\\'enseignant ✅\')">💾 Enregistrer mes données pour l\'enseignant</button><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
   }
   function saveStudentData() {
