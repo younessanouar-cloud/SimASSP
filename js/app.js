@@ -83,7 +83,8 @@
         login: finalLogin,
         passwordHash: AUTH.hash(pwd),
         prenom: prenom, nom: nom, niveau: niveau, classe: classe || "",
-        created: new Date().toLocaleString("fr-FR")
+        created: new Date().toLocaleString("fr-FR"),
+        mustChangePassword: true
       };
       AUTH.accounts.push(acc);
       AUTH.saveAccounts();
@@ -97,6 +98,7 @@
       if (!acc) return null;
       var pwd = AUTH.genPassword();
       acc.passwordHash = AUTH.hash(pwd);
+      acc.mustChangePassword = true;
       AUTH.saveAccounts();
       return pwd;
     },
@@ -200,7 +202,8 @@
         login: finalLogin,
         passwordHash: TEACHER_AUTH.hash(pwd),
         prenom: prenom, nom: nom, role: role || "enseignant",
-        created: new Date().toLocaleString("fr-FR")
+        created: new Date().toLocaleString("fr-FR"),
+        mustChangePassword: true
       };
       TEACHER_AUTH.accounts.push(acc);
       TEACHER_AUTH.saveAccounts();
@@ -214,6 +217,7 @@
       if (!acc) return null;
       var pwd = TEACHER_AUTH.genPassword();
       acc.passwordHash = TEACHER_AUTH.hash(pwd);
+      acc.mustChangePassword = true;
       TEACHER_AUTH.saveAccounts();
       return pwd;
     },
@@ -232,7 +236,8 @@
       login: "enseignant",
       passwordHash: TEACHER_AUTH.hash("ecbg2026"),
       prenom: "Enseignant", nom: "", role: "enseignant",
-      created: new Date().toLocaleString("fr-FR")
+      created: new Date().toLocaleString("fr-FR"),
+      mustChangePassword: true
     });
     TEACHER_AUTH.saveAccounts();
   }
@@ -370,7 +375,8 @@
     hintLevel: 0,
     autoeval: {},
     progression: {},
-    teacherAuth: false
+    teacherAuth: false,
+    forcePasswordChange: false
   };
 
   // ---------- NAVIGATION ----------
@@ -486,6 +492,11 @@
       STATE.autoeval = loadAutoeval();
       var err = document.getElementById("loginError");
       if (err) err.textContent = "";
+      if (AUTH.currentUser.mustChangePassword) {
+        STATE.forcePasswordChange = true;
+        showChangePasswordModal(false);
+        return;
+      }
       toast("Bienvenue " + AUTH.currentUser.prenom + " ! 👋");
       showView("accueil");
     } else {
@@ -1078,6 +1089,11 @@
       STATE.teacherAuth = true;
       var err = document.getElementById("teacherError");
       if (err) err.textContent = "";
+      if (TEACHER_AUTH.currentUser.mustChangePassword) {
+        STATE.forcePasswordChange = true;
+        showChangePasswordModal(true);
+        return;
+      }
       updateUserBadge();
       renderTeacher();
     } else {
@@ -1692,11 +1708,49 @@
     var m = document.getElementById("modal");
     if (m) m.hidden = false;
   };
-  window.closeModal = function () { var m = document.getElementById("modal"); if (m) m.hidden = true; };
+  window.closeModal = function () { if (STATE.forcePasswordChange) return; var m = document.getElementById("modal"); if (m) m.hidden = true; };
+  window.showChangePasswordModal = function (isTeacher) {
+    var name = isTeacher ? (TEACHER_AUTH.currentUser.prenom + " " + TEACHER_AUTH.currentUser.nom) : (AUTH.currentUser.prenom + " " + AUTH.currentUser.nom);
+    openModal(
+      '<h3 style="color:var(--c-primary);">🔐 Première connexion — change ton mot de passe</h3>' +
+      '<p class="muted">Bienvenue ' + name + '. Pour sécuriser ton compte, choisis un nouveau mot de passe.</p>' +
+      '<div class="login__form" style="max-width:320px;margin:16px auto 0;">' +
+      '<label>Nouveau mot de passe<input type="password" id="cp_new" class="input" placeholder="••••••••" /></label>' +
+      '<label>Confirmer<input type="password" id="cp_confirm" class="input" placeholder="••••••••" /></label>' +
+      '<button class="btn btn--primary btn--lg" style="width:100%;justify-content:center;margin-top:10px;" onclick="changePasswordNow(' + (isTeacher ? 'true' : 'false') + ')">Valider</button>' +
+      '</div>'
+    );
+  };
+  window.changePasswordNow = function (isTeacher) {
+    var p1 = document.getElementById("cp_new").value;
+    var p2 = document.getElementById("cp_confirm").value;
+    if (!p1 || p1.length < 4) { toast("Mot de passe trop court (4 caractères min)."); return; }
+    if (p1 !== p2) { toast("Les mots de passe ne correspondent pas."); return; }
+    if (isTeacher) {
+      var acc = TEACHER_AUTH.currentUser;
+      acc.passwordHash = TEACHER_AUTH.hash(p1);
+      acc.mustChangePassword = false;
+      TEACHER_AUTH.saveAccounts();
+      STATE.forcePasswordChange = false;
+      closeModal();
+      toast("Mot de passe modifié ✅");
+      updateUserBadge();
+      renderTeacher();
+    } else {
+      var acc2 = AUTH.currentUser;
+      acc2.passwordHash = AUTH.hash(p1);
+      acc2.mustChangePassword = false;
+      AUTH.saveAccounts();
+      STATE.forcePasswordChange = false;
+      closeModal();
+      toast("Mot de passe modifié ✅");
+      showView("accueil");
+    }
+  };
   var modalClose = document.getElementById("modalClose");
-  if (modalClose) modalClose.addEventListener("click", function () { var m = document.getElementById("modal"); if (m) m.hidden = true; });
+  if (modalClose) modalClose.addEventListener("click", function () { if (STATE.forcePasswordChange) return; var m = document.getElementById("modal"); if (m) m.hidden = true; });
   var backdrop = document.querySelector(".modal__backdrop");
-  if (backdrop) backdrop.addEventListener("click", function () { var m = document.getElementById("modal"); if (m) m.hidden = true; });
+  if (backdrop) backdrop.addEventListener("click", function () { if (STATE.forcePasswordChange) return; var m = document.getElementById("modal"); if (m) m.hidden = true; });
 
   // ---------- INIT ----------
   async function init() {
@@ -1719,7 +1773,8 @@
         login: "enseignant",
         passwordHash: TEACHER_AUTH.hash("ecbg2026"),
         prenom: "Enseignant", nom: "", role: "enseignant",
-        created: new Date().toLocaleString("fr-FR")
+        created: new Date().toLocaleString("fr-FR"),
+        mustChangePassword: true
       });
       TEACHER_AUTH.saveAccounts();
     }
