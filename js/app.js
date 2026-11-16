@@ -647,7 +647,11 @@
     var step = s.steps[idx];
     var hints = s.hints || [];
     var hintHtml = (STATE.hintLevel > 0 && hints.length) ? '<div class="hint">💡 Indice ' + STATE.hintLevel + '/' + hints.length + ' : ' + hints[STATE.hintLevel - 1] + '</div>' : "";
+    var mediaHtml = "";
+    if (s.video) mediaHtml += '<div style="margin-bottom:12px;"><video controls preload="metadata" style="width:100%;max-height:260px;border-radius:8px;background:#000;" src="' + s.video + '"></video></div>';
+    if (s.audio) mediaHtml += '<div style="margin-bottom:12px;"><audio controls preload="metadata" style="width:100%;" src="' + s.audio + '"></audio></div>';
     detail.innerHTML = '<div class="scenario-play">' +
+      mediaHtml +
       '<div class="scenario-play__header"><div class="scenario-play__title">' + s.titre + (STATE.variant ? " — " + STATE.variant.titre : "") + '</div><span class="chip" style="background:' + b.color + ';color:#fff">' + s.bloc + ' · ' + (idx + 1) + '/' + total + ' · ' + diffLabel(s.difficulte || 1) + '</span></div>' +
       (STATE.variant ? '<div class="feedback feedback--warn" style="margin-bottom:10px;"><strong>Variante :</strong> ' + STATE.variant.description + '</div>' : '') +
       '<div class="progress-bar"><div class="progress-bar__fill" style="width:' + (idx / total * 100) + '%"></div></div>' +
