@@ -214,6 +214,8 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 .pagehead { margin-bottom: 24px; }
 .pagehead h1 { font-size: 1.9rem; font-weight: 800; color: var(--c-primary); margin: 0 0 6px; }
 .pagehead p { color: var(--c-muted); margin: 0; }
+.pagehead p.source-officielle { margin-top: 8px; font-size: .8rem; font-style: italic; color: var(--c-accent); }
+.ref-officielle { font-size: .68rem; font-weight: 600; color: var(--c-accent); background: rgba(30,58,95,.07); border-radius: 4px; padding: 1px 5px; vertical-align: 1px; }
 
 /* ---------- Filters ---------- */
 .filters { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }

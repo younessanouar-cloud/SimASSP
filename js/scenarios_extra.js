@@ -182,7 +182,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S48", bloc: "B4", annee: "T", contexte: "structure", duree: "20 min", difficulte: 2,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Evaluation d'une action de prevention",
     description: "Tu evalues une action de prevention des chutes realisee le mois dernier.",
     hints: ["L'evaluation mesure l'efficacite.", "Les indicateurs sont essentiels.", "L'ajustement est necessaire."],
@@ -292,7 +292,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S52", bloc: "B4", annee: "T", contexte: "centre", duree: "25 min", difficulte: 3,
-    competences: ["C4.1", "C4.2", "C4.3", "C4.4"],
+    competences: ["C4.1", "C4.2", "C4.3"],
     titre: "Conception et animation d'une action d'education a la sante",
     description: "Tu dois concevoir et animer une action d'education a la sante sur l'hygiene des mains pour des residents en EHPAD.",
     hints: ["Analyse d'abord les besoins du public.", "Adapte le contenu et les supports.", "Evalue et ajuste."],
@@ -621,7 +621,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S63", bloc: "B3", annee: "T", contexte: "structure", duree: "20 min", difficulte: 2,
-    competences: ["C3.4", "C3.2"],
+    competences: ["C3.5", "C3.2"],
     titre: "Accueil d'un stagiaire",
     description: "Tu accueilles un nouveau stagiaire en PFMP. Tu dois l'accompagner.",
     hints: ["Priorise les taches.", "Communique avec l'equipe.", "Assure la continuite."],
@@ -711,7 +711,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S66", bloc: "B4", annee: "T", contexte: "centre", duree: "25 min", difficulte: 3,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Animation et evaluation d'une action de prevention",
     description: "Tu animes et evalues une action de prevention des chutes pour des residents.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -951,7 +951,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S74", bloc: "B4", annee: "T", contexte: "structure", duree: "20 min", difficulte: 2,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Evaluation d'une action de prevention",
     description: "Tu evalues une action de prevention des chutes realisee le mois dernier.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -1672,7 +1672,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S98", bloc: "B3", annee: "2", contexte: "centre", duree: "20 min", difficulte: 1,
-    competences: ["C3.2", "C3.4"],
+    competences: ["C3.2", "C3.5"],
     titre: "Accueil d'un stagiaire",
     description: "Situation professionnelle en structure d'accueil. Tu dois travailler et communiquer en equipe pluriprofessionnelle.",
     hints: ["Priorise les taches.", "Communique avec l'equipe.", "Assure la continuite."],
@@ -1792,7 +1792,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S102", bloc: "B3", annee: "1", contexte: "centre", duree: "20 min", difficulte: 2,
-    competences: ["C3.2", "C3.4"],
+    competences: ["C3.2", "C3.1"],
     titre: "Coordination d'equipe",
     description: "Situation professionnelle en structure d'accueil. Tu dois travailler et communiquer en equipe pluriprofessionnelle.",
     hints: ["Priorise les taches.", "Communique avec l'equipe.", "Assure la continuite."],
@@ -1912,7 +1912,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S106", bloc: "B4", annee: "1", contexte: "centre", duree: "12 min", difficulte: 2,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Conception d'un support",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -1942,7 +1942,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S107", bloc: "B4", annee: "T", contexte: "structure", duree: "15 min", difficulte: 3,
-    competences: ["C4.1", "C4.4"],
+    competences: ["C4.1", "C4.3"],
     titre: "Animation et evaluation",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -2032,7 +2032,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S110", bloc: "B4", annee: "T", contexte: "centre", duree: "12 min", difficulte: 3,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Sante et nutrition",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -2062,7 +2062,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S111", bloc: "B4", annee: "2", contexte: "structure", duree: "15 min", difficulte: 1,
-    competences: ["C4.1", "C4.4"],
+    competences: ["C4.1", "C4.3"],
     titre: "Bien-etre et relaxation",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -2152,7 +2152,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S114", bloc: "B4", annee: "2", contexte: "centre", duree: "12 min", difficulte: 1,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Bilan d'une action",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],
@@ -2393,7 +2393,7 @@ window.SIM_SCENARIOS_EXTRA = [
   },
   {
     id: "S126", bloc: "B4", annee: "1", contexte: "centre", duree: "12 min", difficulte: 2,
-    competences: ["C4.3", "C4.4"],
+    competences: ["C4.3"],
     titre: "Conception d'un support",
     description: "Situation professionnelle en centre. Tu dois realiser des actions d'education a la sante.",
     hints: ["Analyse les besoins.", "Adapte l'animation.", "Evalue et ajuste."],

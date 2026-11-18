@@ -7,39 +7,49 @@
 window.SIM_DATA = (function () {
   "use strict";
 
+  // ---------- SOURCE OFFICIELLE ----------
+  // Arrêté du 2 février 2022 portant création du bac pro ASSP
+  // (JORF n° 0053 du 04/03/2022, texte 11) — annexe III : référentiel de compétences.
+  // Les intitulés ci-dessous sont reproduits MOT À MOT (apostrophes typographiques comprises).
+  const SOURCE_OFFICIELLE = "Arrêté du 2 février 2022 (JORF n° 0053 du 04/03/2022), annexe III — Référentiel de compétences du bac pro ASSP";
+
   // ---------- BLOCS ----------
   const BLOCS = [
     { code: "B1", emoji: "🤝", title: "Accompagner la personne dans une approche globale et individualisée",
       color: "#1e3a5f", desc: "Posture professionnelle, accueil, communication, projet individualisé, animation d'activités favorisant l'autonomie et la vie sociale." },
-    { code: "B2", emoji: "🛁", title: "Intervenir lors des soins d'hygiène, de confort et de sécurité",
+    { code: "B2", emoji: "🛁", title: "Intervention auprès de la personne lors des soins d’hygiène, de confort et de sécurité, dans les activités de la vie quotidienne",
       color: "#2e7d32", desc: "Activités d'hygiène et de confort, surveillance de l'état de santé, environnement proche, aides techniques, repas adaptés." },
     { code: "B3", emoji: "👥", title: "Travailler et communiquer en équipe pluriprofessionnelle",
-      color: "#2c5282", desc: "Organisation des activités, transmission d'informations, qualité et prévention des risques, bionettoyage, accueil de nouveaux agents." },
-    { code: "B4", emoji: "📚", title: "Réaliser des actions d'éducation à la santé",
-      color: "#f9a825", desc: "Analyser les besoins d'un public, concevoir, mettre en œuvre, évaluer et ajuster une action d'éducation à la santé." }
+      color: "#2c5282", desc: "Organisation des activités, transmission d'informations, démarche qualité, bionettoyage, tutorat des stagiaires." },
+    { code: "B4", emoji: "📚", title: "Réaliser des actions d’éducation à la santé pour un public ciblé, dans un contexte donné",
+      color: "#f9a825", desc: "Analyser les besoins du public, concevoir, mettre en œuvre et évaluer une action d'éducation à la santé." }
   ];
 
   // ---------- COMPÉTENCES ----------
+  // `ref` = numérotation officielle de l'annexe III. Les champs `desc`, `annees`
+  // et `contexte` sont des aides pédagogiques SimASSP (ils ne figurent PAS dans l'annexe III).
   const COMPETENCES = [
-    { id: "C1.1", bloc: "B1", titre: "Adopter une posture professionnelle adaptée", desc: "Respect, bientraitance, limites de compétence, confidentialité, gestion des émotions.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C1.2", bloc: "B1", titre: "Accueillir et communiquer avec la personne, sa famille et son entourage", desc: "Écoute active, reformulation, adaptation du langage, relation de confiance.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C1.3", bloc: "B1", titre: "Participer à la conception, au suivi et à l'évaluation d'un projet individualisé", desc: "Recueil d'informations, objectifs, participation à l'équipe, évaluation.", annees: ["1","T"], contexte: ["centre","structure"] },
-    { id: "C1.4", bloc: "B1", titre: "Concevoir et animer des activités favorisant l'autonomie et la vie sociale", desc: "Choix de l'activité, adaptation au public, animation, bilan.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C2.1", bloc: "B2", titre: "Réaliser les activités d'hygiène, de confort et de sécurisation", desc: "Toilette, habillage, mobilisation, confort, sécurité de la personne.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C2.2", bloc: "B2", titre: "Surveiller l'état de santé et intervenir en conséquence", desc: "Observation, signes d'alerte, prise de constantes, alerte à l'infirmier/médecin.", annees: ["2","1","T"], contexte: ["structure"] },
-    { id: "C2.3", bloc: "B2", titre: "Entretenir l'environnement proche et vérifier les aides techniques", desc: "Bionettoyage, rangement, vérification des dispositifs médicaux et aides techniques.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C2.4", bloc: "B2", titre: "Distribuer des repas adaptés et accompagner la prise des repas", desc: "Respect du régime, aide à l'alimentation, observation de l'ingestion, transmission.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C3.1", bloc: "B3", titre: "Organiser ses activités avec l'équipe", desc: "Planification, répartition des tâches, priorités, gestion du temps.", annees: ["1","T"], contexte: ["structure"] },
-    { id: "C3.2", bloc: "B3", titre: "Traiter et transmettre les informations, y compris numériques", desc: "Transmissions écrites et orales, dossiers, outils numériques, RGPD.", annees: ["2","1","T"], contexte: ["centre","structure"] },
-    { id: "C3.3", bloc: "B3", titre: "Participer à la qualité et à la prévention des risques", desc: "Démarche qualité, signalement, prévention des chutes, infections, ergonomie.", annees: ["1","T"], contexte: ["structure"] },
-    { id: "C3.4", bloc: "B3", titre: "Participer à l'accueil et à l'accompagnement de stagiaires", desc: "Tutorat, transmission de savoirs, accompagnement de nouveaux agents.", annees: ["T"], contexte: ["structure"] },
-    { id: "C4.1", bloc: "B4", titre: "Analyser les besoins d'un public", desc: "Recueil, observation, diagnostic de situation, priorités.", annees: ["1","T"], contexte: ["centre","structure"] },
-    { id: "C4.2", bloc: "B4", titre: "Concevoir une action d'éducation à la santé", desc: "Objectifs, contenu, méthodes, supports, public cible.", annees: ["1","T"], contexte: ["centre"] },
-    { id: "C4.3", bloc: "B4", titre: "Mettre en œuvre l'action", desc: "Animation, communication, gestion du groupe, adaptation en temps réel.", annees: ["T"], contexte: ["centre","structure"] },
-    { id: "C4.4", bloc: "B4", titre: "Évaluer et ajuster l'action", desc: "Indicateurs, bilan, amélioration continue, restitution.", annees: ["T"], contexte: ["centre"] }
+    { id: "C1.1", ref: "1.0", bloc: "B1", titre: "Adopter une posture professionnelle adaptée", desc: "Compétence transversale (asterisque dans le texte officiel) : respect des valeurs de l'autre, éthique, confidentialité, bientraitance, gestion des émotions, limites de compétences.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C1.2", ref: "1.1", bloc: "B1", titre: "Accueillir, communiquer avec la personne, sa famille, son entourage", desc: "Écoute active, reformulation, adaptation du langage, relation de confiance.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C1.3", ref: "1.2", bloc: "B1", titre: "Participer à la conception, au suivi, à la mise en œuvre et à l’évaluation du projet individualisé, du projet de vie, en lien avec l’équipe pluriprofessionnelle", desc: "Recueil d'informations, objectifs, participation à l'équipe, suivi et réajustement.", annees: ["1","T"], contexte: ["centre","structure"] },
+    { id: "C1.4", ref: "1.3", bloc: "B1", titre: "Concevoir et mettre en œuvre des activités d’acquisition ou de maintien de l’autonomie et de la vie sociale pour une personne ou un groupe", desc: "Choix de l'activité, adaptation au public, animation, bilan.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C2.1", ref: "2.1", bloc: "B2", titre: "Réaliser les activités liées à l’hygiène, au confort de la personne et à la sécurisation", desc: "Toilette, habillage, mobilisation, confort, sécurité de la personne.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C2.2", ref: "2.2", bloc: "B2", titre: "Surveiller l’état de santé de la personne et intervenir en conséquence", desc: "Observation, signes d'alerte, prise de constantes, alerte à l'infirmier/médecin.", annees: ["2","1","T"], contexte: ["structure"] },
+    { id: "C2.3", ref: "2.3", bloc: "B2", titre: "Assurer l’hygiène de l’environnement proche de la personne et veiller au bon état de fonctionnement du lit, des aides techniques, des dispositifs médicaux dans l’environnement de la personne", desc: "Bionettoyage, rangement, vérification des dispositifs médicaux et aides techniques.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C2.4", ref: "2.4", bloc: "B2", titre: "Distribuer des repas équilibrés conformes aux besoins de la personne (régimes, allergies, texture…), installer la personne et accompagner la prise des repas", desc: "Respect du régime, aide à l'alimentation, observation de l'ingestion, transmission.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C3.1", ref: "3.1", bloc: "B3", titre: "Gérer ses activités en inter agissant avec l’équipe pluriprofessionnelle dans une posture professionnelle adaptée", desc: "Planification, répartition des tâches, priorités, gestion du temps.", annees: ["1","T"], contexte: ["structure"] },
+    { id: "C3.2", ref: "3.2", bloc: "B3", titre: "Traiter et transmettre des informations en intégrant les différents outils numériques", desc: "Transmissions écrites et orales, dossiers, outils numériques, RGPD.", annees: ["2","1","T"], contexte: ["centre","structure"] },
+    { id: "C3.3", ref: "3.3", bloc: "B3", titre: "Participer à la démarche qualité et à la prévention des risques professionnels", desc: "Démarche qualité, signalement, prévention des chutes, infections, ergonomie.", annees: ["1","T"], contexte: ["structure"] },
+    { id: "C3.4", ref: "3.4", bloc: "B3", titre: "Coordonner et conduire une équipe de bio nettoyage", desc: "Planification et conduite de l'équipe de bionettoyage, répartition des tâches, contrôle de la qualité du nettoyage.", annees: ["1","T"], contexte: ["structure"] },
+    { id: "C3.5", ref: "3.5", bloc: "B3", titre: "Participer à l’accueil, à l’encadrement et à la formation de stagiaires, à l’accueil des nouveaux agents, des bénévoles", desc: "Tutorat, transmission de savoirs, accompagnement des stagiaires, des nouveaux agents et des bénévoles.", annees: ["T"], contexte: ["structure"] },
+    { id: "C4.1", ref: "4.1", bloc: "B4", titre: "Analyser les besoins du public", desc: "Recueil, observation, diagnostic de situation, priorités.", annees: ["1","T"], contexte: ["centre","structure"] },
+    { id: "C4.2", ref: "4.2", bloc: "B4", titre: "Concevoir une action d’éducation à la santé", desc: "Objectifs, contenu, méthodes, supports, public cible.", annees: ["1","T"], contexte: ["centre"] },
+    { id: "C4.3", ref: "4.3", bloc: "B4", titre: "Mettre en œuvre et évaluer l’action d’éducation à la santé", desc: "Animation, gestion du groupe, adaptation en temps réel, indicateurs, bilan, ajustement et restitution.", annees: ["1","T"], contexte: ["centre","structure"] }
   ];
 
   // ---------- CRITÈRES D'AUTOÉVALUATION ----------
+  // Grille PÉDAGOGIQUE SimASSP : synthèse d'indicateurs de l'annexe III,
+  // présentée à l'élève comme aide à la réflexion, PAS comme un intitulé officiel.
   const CRITERES = [
     { id: "cr_bientraitance", label: "Bientraitance", question: "Ai-je tenu compte des préférences, du confort et de la dignité de la personne ?", bloc: "B1" },
     { id: "cr_communication", label: "Communication", question: "Ai-je écouté, reformulé et adapté mon langage ?", bloc: "B1" },
@@ -63,7 +73,7 @@ window.SIM_DATA = (function () {
   const SCENARIOS = [
     {
       id: "S1", bloc: "B1", annee: "2", contexte: "structure", duree: "15 min", difficulte: 1,
-      competences: ["C1.1","C1.2","C3.2"],
+      competences: ["C1.1", "C1.2", "C3.2"],
       titre: "Mme D. refuse sa toilette",
       description: "Mme D., 84 ans, présente une gêne à la marche et refuse partiellement sa toilette ce matin. Tu es en PFMP en EHPAD.",
       hints: ["Pense à l'accueil et à la communication avant l'action.", "La bientraitance implique le respect des choix de la personne.", "Une bonne transmission = faits + contexte + suite à donner."],
@@ -95,7 +105,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S2", bloc: "B2", annee: "2", contexte: "structure", duree: "12 min", difficulte: 2,
-      competences: ["C2.1","C2.2","C3.2"],
+      competences: ["C2.1", "C2.2", "C3.2"],
       titre: "Surveillance de l'état de santé",
       description: "M. L., 76 ans, diabétique, se plaint de vertiges après le petit-déjeuner. Tu es en PFMP.",
       hints: ["Sécuriser + observer + mesurer avant d'agir.", "Connais le protocole et alerte toujours.", "Une transmission utile = quand, quoi, comment, qui, évolution."],
@@ -125,7 +135,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S3", bloc: "B3", annee: "1", contexte: "structure", duree: "10 min", difficulte: 1,
-      competences: ["C3.2","C3.3"],
+      competences: ["C3.2", "C3.3"],
       titre: "Transmission orale en équipe",
       description: "Fin de service. Tu dois transmettre les informations importantes à l'équipe de l'après-midi.",
       hints: ["Une transmission efficace est structurée et priorisée.", "La chute doit être tracée même sans gravité.", "La qualité se construit avec bienveillance et fermeté."],
@@ -153,7 +163,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S4", bloc: "B4", annee: "T", contexte: "centre", duree: "20 min", difficulte: 3,
-      competences: ["C4.1","C4.2","C4.3","C4.4"],
+      competences: ["C4.1", "C4.2", "C4.3"],
       titre: "Concevoir une action d'éducation à la santé",
       description: "Tu dois concevoir une action d'éducation à la santé sur l'hydratation pour des résidents d'EHPAD.",
       hints: ["Analyser avant de concevoir.", "L'éducation à la santé s'adapte aux freins réels.", "Évaluer = mesurer + ajuster."],
@@ -183,7 +193,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S5", bloc: "B1", annee: "2", contexte: "structure", duree: "12 min", difficulte: 2,
-      competences: ["C1.1","C1.2","C1.4"],
+      competences: ["C1.1", "C1.2", "C1.4"],
       titre: "Animer une activité mémoire",
       description: "Tu animes un atelier mémoire pour 6 résidents en EHPAD. M. P. est agité et interrompt.",
       hints: ["L'animation, c'est s'adapter en temps réel.", "Observer et inclure, sans forcer."],
@@ -205,7 +215,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S6", bloc: "B2", annee: "1", contexte: "structure", duree: "14 min", difficulte: 2,
-      competences: ["C2.1","C2.4","C3.2"],
+      competences: ["C2.1", "C2.4", "C3.2"],
       titre: "Repas et aide à l'alimentation",
       description: "Tu aides Mme R. à déjeuner. Elle a une dysphagie et un régime mixé.",
       hints: ["Sécurité d'abord : identité, prescription, position.", "La toux pendant le repas = alerte aspiration.", "Quantité + incidents + comportement = transmission utile."],
@@ -235,7 +245,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S7", bloc: "B1", annee: "T", contexte: "structure", duree: "15 min", difficulte: 3,
-      competences: ["C1.1","C1.2","C1.3"],
+      competences: ["C1.1", "C1.2", "C1.3"],
       titre: "Projet individualisé — M. A. veut rentrer chez lui",
       description: "M. A., 82 ans, en EHPAD depuis 3 mois, exprime le souhait de rentrer chez lui. Tu participes à la réunion d'équipe.",
       hints: ["Le projet individualisé part des souhaits de la personne.", "Le projet se construit avec l'équipe et la personne.", "L'accompagnement inclut la dimension émotionnelle."],
@@ -262,7 +272,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S8", bloc: "B2", annee: "T", contexte: "structure", duree: "12 min", difficulte: 2,
-      competences: ["C2.1","C2.2","C3.3"],
+      competences: ["C2.1", "C2.2", "C3.3"],
       titre: "Mobilisation et prévention des chutes",
       description: "M. T., 78 ans, a des troubles de l'équilibre. Tu dois l'aider à se lever du fauteuil pour aller aux toilettes.",
       hints: ["Sécurité = environnement + explication + équipement.", "En cas de vacillement, sécuriser d'abord.", "La prévention des chutes repose sur des observations précises."],
@@ -290,7 +300,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S9", bloc: "B3", annee: "2", contexte: "structure", duree: "10 min", difficulte: 1,
-      competences: ["C2.3","C3.2","C3.3"],
+      competences: ["C2.3", "C3.2", "C3.3"],
       titre: "Bionettoyage et prévention des infections",
       description: "Tu dois réaliser le bionettoyage de la chambre d'un résident porteur d'une infection.",
       hints: ["Le bionettoyage suit un protocole précis.", "Le retrait des EPI et le lavage des mains sont des étapes clés."],
@@ -312,7 +322,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S10", bloc: "B4", annee: "1", contexte: "centre", duree: "15 min", difficulte: 2,
-      competences: ["C4.1","C4.2","C4.3"],
+      competences: ["C4.1", "C4.2", "C4.3"],
       titre: "Sensibiliser à l'hygiène des mains",
       description: "Tu dois animer une courte sensibilisation à l'hygiène des mains pour un groupe de résidents.",
       hints: ["L'éducation à la santé se prépare.", "Vérifier la compréhension est essentiel.", "Évaluer pour améliorer."],
@@ -338,7 +348,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S11", bloc: "B1", annee: "2", contexte: "centre", duree: "12 min", difficulte: 2,
-      competences: ["C1.1","C1.2"],
+      competences: ["C1.1", "C1.2"],
       titre: "Communication avec la famille",
       description: "La fille de Mme B. est inquiète et te pose des questions sur l'état de sa mère.",
       hints: ["Écoute, empathie, limites professionnelles.", "La confidentialité est un devoir professionnel."],
@@ -360,7 +370,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S12", bloc: "B2", annee: "2", contexte: "structure", duree: "10 min", difficulte: 1,
-      competences: ["C2.1","C2.2","C3.2"],
+      competences: ["C2.1", "C2.2", "C3.2"],
       titre: "Prise de constantes",
       description: "Tu dois prendre la tension et la température de M. C. avant la visite médicale.",
       hints: ["Expliquer + installer + hygiène + notation.", "Transmettre sans alarmer."],
@@ -383,7 +393,7 @@ window.SIM_DATA = (function () {
     // ---- NOUVEAUX SCÉNARIOS (axe 1 : richesse) ----
     {
       id: "S13", bloc: "B2", annee: "T", contexte: "structure", duree: "12 min", difficulte: 3,
-      competences: ["C2.2","C3.2","C3.3"],
+      competences: ["C2.2", "C3.2", "C3.3"],
       titre: "Détresse respiratoire",
       description: "Mme E., 88 ans, présente une détresse respiratoire soudaine en salle à manger.",
       hints: ["En urgence : sécurité, alerte, position, surveillance.", "Ne jamais laisser seul une personne en détresse.", "La transmission d'urgence doit être claire et immédiate."],
@@ -412,7 +422,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S14", bloc: "B3", annee: "T", contexte: "structure", duree: "12 min", difficulte: 2,
-      competences: ["C3.1","C3.2","C3.4"],
+      competences: ["C3.1", "C3.2", "C3.5"],
       titre: "Accueil d'un stagiaire",
       description: "Un nouveau stagiaire arrive dans ton service. Tu es chargé de l'accueillir et de l'accompagner.",
       hints: ["L'accueil se prépare et s'organise.", "La transmission des savoirs se fait progressivement.", "L'encadrement inclut la sécurité et la qualité."],
@@ -438,7 +448,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S15", bloc: "B4", annee: "T", contexte: "structure", duree: "15 min", difficulte: 3,
-      competences: ["C4.1","C4.2","C4.3","C4.4"],
+      competences: ["C4.1", "C4.2", "C4.3"],
       titre: "Action de prévention — chutes à domicile",
       description: "Tu dois concevoir et animer une action de prévention des chutes pour des personnes âgées à domicile.",
       hints: ["Analyser les besoins et les risques à domicile.", "Adapter l'action au lieu de vie.", "Évaluer et ajuster avec les personnes accompagnées."],
@@ -464,7 +474,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S16", bloc: "B1", annee: "1", contexte: "structure", duree: "12 min", difficulte: 2,
-      competences: ["C1.1","C1.2","C1.4"],
+      competences: ["C1.1", "C1.2", "C1.4"],
       titre: "Activité physique adaptée",
       description: "Tu animes une séance de gymnastique douce pour des résidents. Mme F. a peur de tomber.",
       hints: ["L'animation s'adapte aux peurs et aux capacités.", "La sécurité est prioritaire.", "L'inclusion passe par l'adaptation."],
@@ -486,7 +496,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S17", bloc: "B2", annee: "1", contexte: "centre", duree: "12 min", difficulte: 1,
-      competences: ["C2.1","C2.3"],
+      competences: ["C2.1", "C2.3"],
       titre: "Hygiène et confort — toilette au lit",
       description: "Tu dois réaliser la toilette au lit de M. G., alité, avec aide partielle.",
       hints: ["Respect, intimité, sécurité.", "La toilette se prépare et se réalise avec consentement.", "L'observation pendant le soin est importante."],
@@ -507,7 +517,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S18", bloc: "B3", annee: "2", contexte: "structure", duree: "10 min", difficulte: 1,
-      competences: ["C3.2","C3.3"],
+      competences: ["C3.2", "C3.3"],
       titre: "Signalement d'un événement indésirable",
       description: "Tu observes une erreur de distribution de médicaments par un collègue.",
       hints: ["La sécurité des résidents est prioritaire.", "Le signalement se fait avec respect et professionnalisme.", "La traçabilité est essentielle."],
@@ -529,7 +539,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S19", bloc: "B4", annee: "1", contexte: "centre", duree: "12 min", difficulte: 2,
-      competences: ["C4.1","C4.2"],
+      competences: ["C4.1", "C4.2"],
       titre: "Concevoir une action sur le sommeil",
       description: "Tu dois concevoir une action d'éducation à la santé sur l'hygiène du sommeil pour des résidents.",
       hints: ["Analyser les besoins et les habitudes.", "Adapter le contenu au public.", "Évaluer et ajuster."],
@@ -550,7 +560,7 @@ window.SIM_DATA = (function () {
     },
     {
       id: "S20", bloc: "B1", annee: "3", contexte: "structure", duree: "15 min", difficulte: 3,
-      competences: ["C1.1","C1.2","C1.3"],
+      competences: ["C1.1", "C1.2", "C1.3"],
       titre: "Fin de vie — accompagnement",
       description: "Mme H. est en fin de vie. Sa famille est présente et en détresse. Tu accompagnes.",
       hints: ["L'accompagnement en fin de vie est global et respectueux.", "La communication avec la famille est essentielle.", "Le respect de la dignité et des souhaits est prioritaire."],
@@ -593,5 +603,5 @@ window.SIM_DATA = (function () {
     "B4": ["S4","S10","S15","S19"]
   };
 
-  return { BLOCS, COMPETENCES, CRITERES, TIMELINE, SCENARIOS, NIVEAUX, REMEDIATION };
+  return { SOURCE_OFFICIELLE, BLOCS, COMPETENCES, CRITERES, TIMELINE, SCENARIOS, NIVEAUX, REMEDIATION };
 })();

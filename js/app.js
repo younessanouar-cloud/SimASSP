@@ -285,15 +285,62 @@
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
     return base + "_" + uid;
   }
+
+  // ---------- MIGRATION DES COMPÉTENCES (arrêté du 02/02/2022) ----------
+  // Ancien modèle : C4.4 = « évaluer » (compétence 4.3 scindée à tort) et
+  // C3.4 = tutorat (alors que 3.4 = bionettoyage et 3.5 = tutorat).
+  // Nouveau modèle : C4.3 = « mettre en œuvre ET évaluer », C3.4 = bionettoyage,
+  // C3.5 = tutorat. Le marqueur `_compVersion: 2` voyage avec les données :
+  // sans lui, une progression acquise sur la NOUVELLE C3.4 serait renommée à tort.
+  function migrateCompKeys(obj, isRoot, legacy) {
+    if (!obj || typeof obj !== "object") return false;
+    if (legacy === undefined) legacy = (obj._compVersion !== 2);
+    var changed = false;
+    Object.keys(obj).forEach(function (k) {
+      if (migrateCompKeys(obj[k], false, legacy)) changed = true;
+    });
+    if (legacy) {
+      if (Object.prototype.hasOwnProperty.call(obj, "C3.4")) {
+        var old34 = obj["C3.4"];
+        if (Object.prototype.hasOwnProperty.call(obj, "C3.5")) {
+          if (typeof old34 === "number" && typeof obj["C3.5"] === "number")
+            obj["C3.5"] = Math.max(obj["C3.5"], old34);
+        } else obj["C3.5"] = old34;
+        delete obj["C3.4"];
+        changed = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(obj, "C4.4")) {
+        var old44 = obj["C4.4"];
+        if (Object.prototype.hasOwnProperty.call(obj, "C4.3")) {
+          if (typeof old44 === "number" && typeof obj["C4.3"] === "number")
+            obj["C4.3"] = Math.max(obj["C4.3"], old44);
+        } else obj["C4.3"] = old44;
+        delete obj["C4.4"];
+        changed = true;
+      }
+    }
+    if (isRoot && !Array.isArray(obj) && obj._compVersion !== 2) {
+      obj._compVersion = 2;
+      changed = true;
+    }
+    return changed;
+  }
+  function persistMigrated(ns, owner, data, localKey) {
+    if (localKey) { try { localStorage.setItem(localKey, JSON.stringify(data)); } catch (e) {} }
+    if (window.Storage) window.Storage.set(ns, owner, data).catch(function () {});
+  }
+
   function loadProgression() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
     // Cache local synchrone
     var cached = {};
     try { cached = JSON.parse(localStorage.getItem("simassp_progress_" + uid) || "{}"); } catch (e) { cached = {}; }
+    if (migrateCompKeys(cached, true)) persistMigrated("progress", uid, cached, "simassp_progress_" + uid);
     // Supabase async (mise a jour du cache en arriere-plan)
     if (window.Storage) {
       window.Storage.get("progress", uid).then(function (d) {
         if (d) {
+          if (migrateCompKeys(d, true)) persistMigrated("progress", uid, d, null);
           try { STATE.progression = d; localStorage.setItem("simassp_progress_" + uid, JSON.stringify(d)); } catch (e) {}
           try { renderProgression && renderProgression(); } catch (e) {}
         }
@@ -605,7 +652,7 @@
       var lvl = getLevel(c.id);
       var lvlObj = D.NIVEAUX.filter(function (n) { return n.code === lvl; })[0];
       return '<div class="comp-item">' +
-        '<div><div class="comp-item__title">' + c.id + ' — ' + c.titre + '</div>' +
+        '<div><div class="comp-item__title">' + c.id + (c.ref ? ' <span class="ref-officielle" title="Numérotation officielle (annexe III)">off. ' + c.ref + '</span>' : '') + ' — ' + c.titre + '</div>' +
         '<div class="comp-item__desc">' + c.desc + '</div>' +
         '<div class="comp-item__meta">' +
         '<span class="tag tag--annee">' + c.annees.map(function (a) { return a === "2" ? "2de" : a === "1" ? "1re" : "Tle"; }).join(", ") + '</span>' +
@@ -1474,9 +1521,11 @@
   function loadStudentsData() {
     var cached = {};
     try { cached = JSON.parse(localStorage.getItem("simassp_students_data") || "{}"); } catch (e) { cached = {}; }
+    if (migrateCompKeys(cached, true)) persistMigrated("students_data", "global", cached, "simassp_students_data");
     if (window.Storage) {
       window.Storage.get("students_data", "global").then(function (d) {
         if (d) {
+          if (migrateCompKeys(d, true)) persistMigrated("students_data", "global", d, null);
           try { localStorage.setItem("simassp_students_data", JSON.stringify(d)); } catch (e) {}
         }
       }).catch(function () {});
@@ -1555,9 +1604,11 @@
   function loadTuteurEvals() {
     var cached = {};
     try { cached = JSON.parse(localStorage.getItem("simassp_tuteur_evals") || "{}"); } catch (e) { cached = {}; }
+    if (migrateCompKeys(cached, true)) persistMigrated("tuteur_evals", "global", cached, "simassp_tuteur_evals");
     if (window.Storage) {
       window.Storage.get("tuteur_evals", "global").then(function (d) {
         if (d) {
+          if (migrateCompKeys(d, true)) persistMigrated("tuteur_evals", "global", d, null);
           try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(d)); } catch (e) {}
         }
       }).catch(function () {});
