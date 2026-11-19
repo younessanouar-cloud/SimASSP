@@ -67,7 +67,13 @@ L'utilisateur a retenu l'**Option B** le 19/11/2026.
    - les policies `simassp_kv lecture/insertion/modification/suppression` existent ;
    - les fonctions `simassp_*` existent ;
    - un navigateur **non connecté** obtient `0 ligne` sur `GET /rest/v1/simassp_kv`.
-4. Recharger SimASSP sur le PC **et** le téléphone, se connecter avec un compte élève, puis
+4. **Si la lecture anonyme renvoie encore des lignes**, une policy héritée subsiste
+   (souvent « Enable read access for all users », créée par défaut par Supabase).
+   Exécuter alors `docs/RLS_CORRECTIF.sql` : il supprime **toutes** les policies de
+   `simassp_kv` par leur nom réel, puis recrée uniquement les 4 policies authentifiées.
+   ⚠️ Ne l'exécuter qu'**après** l'étape 1 (Anonymous Sign-Ins actifs) : sans session
+   anonyme, le rôle `anon` n'aurait plus aucun accès et l'app cesserait de fonctionner.
+5. Recharger SimASSP sur le PC **et** le téléphone, se connecter avec un compte élève, puis
    vérifier que la progression remonte dans l'espace enseignant depuis les deux appareils.
 
 ## 5. Repli automatique
@@ -97,3 +103,18 @@ du SQL.
 - **Option A** — activer RLS en laissant le rôle `anon` tout voir : rendait l'accès explicite et
   auditable, mais n'apportait **aucune** protection réelle. Écartée au profit de l'option B.
 - **Laisser en l'état** : écarté après confirmation de la lecture anonyme.
+
+## 8. Diagnostic réel du 19/11/2026 après première application
+
+Contrôles effectués en lecture seule avec la clé publishable :
+
+| Contrôle | Résultat | Interprétation |
+|---|---|---|
+| `GET /auth/v1/settings` → `external.anonymous_users` | `false` | Anonymous Sign-Ins toujours désactivés dans le dashboard |
+| `POST /auth/v1/signup` | `422 anonymous_provider_disabled` | Conséquence directe du point précédent |
+| `GET /simassp_kv` sans token | `200` + lignes `global`/`teachers`/`accounts` | Une policy `anon` héritée autorise encore la lecture |
+| `GET /simassp_identities` sans token | `401 permission denied` | Correct : table sans grant pour `anon` |
+| RPC `simassp_public_account/teacher`, `simassp_my_owner`, `simassp_is_teacher`, `simassp_student_global_set` | répondent | Le SQL de l'Option B a bien été appliqué |
+
+👉 Actions restantes : activer Anonymous Sign-Ins **et** exécuter `docs/RLS_CORRECTIF.sql`,
+puis relancer la validation réelle avant tout test d'écriture.

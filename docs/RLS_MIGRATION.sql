@@ -79,15 +79,31 @@ grant execute on function public.simassp_is_teacher() to authenticated;
 -- ------------------------------------------------------------
 alter table public.simassp_kv enable row level security;
 
--- Nettoyage des policies de l'option A si elle a été appliquée.
-drop policy if exists "simassp_kv anon select" on public.simassp_kv;
-drop policy if exists "simassp_kv anon insert" on public.simassp_kv;
-drop policy if exists "simassp_kv anon update" on public.simassp_kv;
-drop policy if exists "simassp_kv anon delete" on public.simassp_kv;
-drop policy if exists "simassp_kv lecture" on public.simassp_kv;
-drop policy if exists "simassp_kv insertion" on public.simassp_kv;
-drop policy if exists "simassp_kv modification" on public.simassp_kv;
-drop policy if exists "simassp_kv suppression" on public.simassp_kv;
+-- Nettoyage de TOUTES les policies existantes (option A, policies par défaut
+-- Supabase du type « Enable read access for all users », exécutions précédentes
+-- de ce script...). Une policy anon résiduelle rendrait la RLS inopérante.
+do $$
+declare
+  pol record;
+begin
+  for pol in
+    select policyname
+      from pg_policies
+     where schemaname = 'public'
+       and tablename = 'simassp_kv'
+  loop
+    execute format('drop policy if exists %I on public.simassp_kv', pol.policyname);
+  end loop;
+end
+$$;
+
+-- Privilèges : plus rien pour anon, tout pour authenticated.
+revoke all on public.simassp_kv from anon;
+grant select, insert, update, delete on public.simassp_kv to authenticated;
+grant select, insert, update, delete on public.simassp_kv to service_role;
+
+-- Pas de FORCE ROW LEVEL SECURITY : les fonctions SECURITY DEFINER (§4 à §6)
+-- lisent la table en tant que propriétaire et doivent pouvoir le faire.
 
 create policy "simassp_kv lecture" on public.simassp_kv
   for select to authenticated
