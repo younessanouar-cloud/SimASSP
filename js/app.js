@@ -10,7 +10,21 @@
     currentUser: null,
     accounts: [],
     deletedIds: [],
-    hash: function (s) { return btoa(unescape(encodeURIComponent("simassp::" + s))); },
+    // Hachage PBKDF2 (remplace l'ancien base64 réversible).
+    hashPassword: function (pwd) { return window.SimASSPCrypto.hash(pwd); },
+    // Vérifie le mot de passe ; si l'ancien format base64 est valide,
+    // le remplace par un hash PBKDF2 et le persiste immédiatement.
+    verifyAndUpgrade: async function (acc, pwd) {
+      var res = await window.SimASSPCrypto.verify(pwd, acc.passwordHash);
+      if (!res.ok) return false;
+      if (res.upgraded) {
+        acc.passwordHash = res.upgraded;
+        acc.hashAlgo = "pbkdf2-sha256";
+        try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
+        await AUTH.saveAccounts();
+      }
+      return true;
+    },
     loadAccounts: async function () {
       var cached = [];
       try { cached = JSON.parse(localStorage.getItem("simassp_accounts") || "[]"); } catch (e) { cached = []; }
@@ -60,13 +74,13 @@
       var suffix = niveau === "2" ? "2de" : niveau === "1" ? "1re" : "tle";
       return base + "." + suffix;
     },
-    login: function (login, pwd) {
+    login: async function (login, pwd) {
       var acc = null;
       for (var i = 0; i < AUTH.accounts.length; i++) {
         if (AUTH.accounts[i].login === login) { acc = AUTH.accounts[i]; break; }
       }
       if (!acc) return false;
-      if (acc.passwordHash !== AUTH.hash(pwd)) return false;
+      if (!(await AUTH.verifyAndUpgrade(acc, pwd))) return false;
       AUTH.currentUser = acc;
       // Pas de restauration automatique : on ne persiste pas la session.
       try { sessionStorage.removeItem("simassp_session"); } catch (e) {}
@@ -81,7 +95,7 @@
       // Desactive : on demande toujours l'identifiant et le mot de passe.
       return false;
     },
-    createAccount: function (prenom, nom, niveau, classe) {
+    createAccount: async function (prenom, nom, niveau, classe) {
       var login = AUTH.genLogin(prenom, nom, niveau);
       var finalLogin = login;
       var i = 2;
@@ -90,25 +104,27 @@
       var acc = {
         id: "u_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
         login: finalLogin,
-        passwordHash: AUTH.hash(pwd),
+        passwordHash: await AUTH.hashPassword(pwd),
+        hashAlgo: "pbkdf2-sha256",
         prenom: prenom, nom: nom, niveau: niveau, classe: classe || "",
         created: new Date().toLocaleString("fr-FR"),
         mustChangePassword: true
       };
       AUTH.accounts.push(acc);
-      AUTH.saveAccounts();
+      await AUTH.saveAccounts();
       return { account: acc, password: pwd };
     },
-    resetPassword: function (id) {
+    resetPassword: async function (id) {
       var acc = null;
       for (var i = 0; i < AUTH.accounts.length; i++) {
         if (AUTH.accounts[i].id === id) { acc = AUTH.accounts[i]; break; }
       }
       if (!acc) return null;
       var pwd = AUTH.genPassword();
-      acc.passwordHash = AUTH.hash(pwd);
+      acc.passwordHash = await AUTH.hashPassword(pwd);
+      acc.hashAlgo = "pbkdf2-sha256";
       acc.mustChangePassword = true;
-      AUTH.saveAccounts();
+      await AUTH.saveAccounts();
       return pwd;
     },
     deleteAccount: function (id) {
@@ -168,7 +184,18 @@
     currentUser: null,
     accounts: [],
     deletedIds: [],
-    hash: AUTH.hash,
+    hashPassword: function (pwd) { return window.SimASSPCrypto.hash(pwd); },
+    verifyAndUpgrade: async function (acc, pwd) {
+      var res = await window.SimASSPCrypto.verify(pwd, acc.passwordHash);
+      if (!res.ok) return false;
+      if (res.upgraded) {
+        acc.passwordHash = res.upgraded;
+        acc.hashAlgo = "pbkdf2-sha256";
+        try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
+        await TEACHER_AUTH.saveAccounts();
+      }
+      return true;
+    },
     loadAccounts: async function () {
       var cached = [];
       try { cached = JSON.parse(localStorage.getItem("simassp_teachers") || "[]"); } catch (e) { cached = []; }
@@ -207,18 +234,18 @@
       if (!base) base = "enseignant";
       return base;
     },
-    login: function (login, pwd) {
+    login: async function (login, pwd) {
       var acc = null;
       for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
         if (TEACHER_AUTH.accounts[i].login === login) { acc = TEACHER_AUTH.accounts[i]; break; }
       }
       if (!acc) return false;
-      if (acc.passwordHash !== TEACHER_AUTH.hash(pwd)) return false;
+      if (!(await TEACHER_AUTH.verifyAndUpgrade(acc, pwd))) return false;
       TEACHER_AUTH.currentUser = acc;
       return true;
     },
     logout: function () { TEACHER_AUTH.currentUser = null; },
-    createAccount: function (prenom, nom, role) {
+    createAccount: async function (prenom, nom, role) {
       var login = TEACHER_AUTH.genLogin(prenom, nom);
       var finalLogin = login;
       var i = 2;
@@ -227,25 +254,27 @@
       var acc = {
         id: "t_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
         login: finalLogin,
-        passwordHash: TEACHER_AUTH.hash(pwd),
+        passwordHash: await TEACHER_AUTH.hashPassword(pwd),
+        hashAlgo: "pbkdf2-sha256",
         prenom: prenom, nom: nom, role: role || "enseignant",
         created: new Date().toLocaleString("fr-FR"),
         mustChangePassword: true
       };
       TEACHER_AUTH.accounts.push(acc);
-      TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccounts();
       return { account: acc, password: pwd };
     },
-    resetPassword: function (id) {
+    resetPassword: async function (id) {
       var acc = null;
       for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
         if (TEACHER_AUTH.accounts[i].id === id) { acc = TEACHER_AUTH.accounts[i]; break; }
       }
       if (!acc) return null;
       var pwd = TEACHER_AUTH.genPassword();
-      acc.passwordHash = TEACHER_AUTH.hash(pwd);
+      acc.passwordHash = await TEACHER_AUTH.hashPassword(pwd);
+      acc.hashAlgo = "pbkdf2-sha256";
       acc.mustChangePassword = true;
-      TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccounts();
       return pwd;
     },
     deleteAccount: function (id) {
@@ -267,18 +296,7 @@
     merged = merged.filter(function (a) { return TEACHER_AUTH.deletedIds.indexOf(a.id) === -1; });
     TEACHER_AUTH.accounts = merged;
   }).catch(function () { /* keep in-memory accounts */ });
-  // compte par defaut
-  if (TEACHER_AUTH.accounts.length === 0) {
-    TEACHER_AUTH.accounts.push({
-      id: "t_default",
-      login: "enseignant",
-      passwordHash: TEACHER_AUTH.hash("ecbg2026"),
-      prenom: "Enseignant", nom: "", role: "enseignant",
-      created: new Date().toLocaleString("fr-FR"),
-      mustChangePassword: true
-    });
-    TEACHER_AUTH.saveAccounts();
-  }
+  // Le compte enseignant par défaut est créé dans init() (hashage PBKDF2 asynchrone).
 
   // ---------- STORAGE PAR UTILISATEUR ----------
   function userKey(base) {
@@ -607,10 +625,12 @@
       img.src = "https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=" + encodeURIComponent(url);
     }
   }
-  window.doLogin = function () {
+  window.doLogin = async function () {
     var login = document.getElementById("loginUser").value.trim();
     var pwd = document.getElementById("loginPwd").value;
-    if (AUTH.login(login, pwd)) {
+    var err0 = document.getElementById("loginError");
+    if (err0) err0.textContent = "";
+    if (await AUTH.login(login, pwd)) {
       STATE.progression = loadProgression();
       STATE.autoeval = loadAutoeval();
       var err = document.getElementById("loginError");
@@ -1298,10 +1318,12 @@
     renderTeacherTab("comptes");
   }
   var teacherLoginBtn = document.getElementById("teacherLoginBtn");
-  if (teacherLoginBtn) teacherLoginBtn.addEventListener("click", function () {
+  if (teacherLoginBtn) teacherLoginBtn.addEventListener("click", async function () {
     var login = document.getElementById("teacherUser").value.trim();
     var pwd = document.getElementById("teacherPwd").value;
-    if (TEACHER_AUTH.login(login, pwd)) {
+    var errInit = document.getElementById("teacherError");
+    if (errInit) errInit.textContent = "";
+    if (await TEACHER_AUTH.login(login, pwd)) {
       STATE.teacherAuth = true;
       var err = document.getElementById("teacherError");
       if (err) err.textContent = "";
@@ -1371,13 +1393,13 @@
         }).join("") + '</tbody></table></div>');
   }
 
-  window.createAccount = function () {
+  window.createAccount = async function () {
     var prenom = document.getElementById("newPrenom").value.trim();
     var nom = document.getElementById("newNom").value.trim();
     var niveau = document.getElementById("newNiveau").value;
     var classe = document.getElementById("newClasse").value.trim();
     if (!prenom || !nom) { toast("Prénom et nom requis."); return; }
-    var res = AUTH.createAccount(prenom, nom, niveau, classe);
+    var res = await AUTH.createAccount(prenom, nom, niveau, classe);
     document.getElementById("newPrenom").value = "";
     document.getElementById("newNom").value = "";
     document.getElementById("newClasse").value = "";
@@ -1386,9 +1408,9 @@
     if (r) r.innerHTML = '<div class="feedback feedback--good"><strong>✅ Compte créé</strong><br>Identifiant : <code>' + res.account.login + '</code><br>Mot de passe : <code>' + res.password + '</code><br><span class="muted" style="font-size:.75rem;">Note ce mot de passe, il ne sera plus affiché.</span></div>';
   };
 
-  window.resetPwd = function (id) {
+  window.resetPwd = async function (id) {
     if (!confirm("Réinitialiser le mot de passe de ce compte ?")) return;
-    var pwd = AUTH.resetPassword(id);
+    var pwd = await AUTH.resetPassword(id);
     if (pwd) {
       openModal('<h3 style="color:var(--c-primary);">🔄 Mot de passe réinitialisé</h3><p>Nouveau mot de passe : <code style="font-size:1.1rem;background:#f1f5f9;padding:4px 8px;border-radius:6px;">' + pwd + '</code></p><p class="muted" style="font-size:.8rem;">Note ce mot de passe, il ne sera plus affiché.</p><button class="btn btn--primary" onclick="closeModal()">OK</button>');
     }
@@ -1425,14 +1447,16 @@
           var n = 0;
           var idx = 0;
           var generated = [];
-          data.forEach(function (d) {
-            if (!d.login) return;
-            if (AUTH.accounts.some(function (a) { return a.login === d.login; })) return;
+          for (var di = 0; di < data.length; di++) {
+            var d = data[di];
+            if (!d.login) continue;
+            if (AUTH.accounts.some(function (a) { return a.login === d.login; })) continue;
             var pwd = d.password || AUTH.genPassword();
             AUTH.accounts.push({
               id: "u_" + Date.now() + "_" + idx + "_" + Math.random().toString(36).slice(2, 8),
               login: d.login,
-              passwordHash: AUTH.hash(pwd),
+              passwordHash: await AUTH.hashPassword(pwd),
+              hashAlgo: "pbkdf2-sha256",
               prenom: d.prenom || "", nom: d.nom || "",
               niveau: d.niveau || "2", classe: d.classe || "",
               created: d.created || new Date().toLocaleString("fr-FR"),
@@ -1441,7 +1465,7 @@
             if (!d.password) generated.push({ login: d.login, pwd: pwd });
             idx++;
             n++;
-          });
+          }
           // Persistance synchrone locale d'abord (evite la perte en cas de deconnexion rapide)
           try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
           await AUTH.saveAccounts();
@@ -1486,21 +1510,21 @@
             '</td></tr>';
         }).join("") + '</tbody></table></div>');
   }
-  window.createTeacherAccount = function () {
+  window.createTeacherAccount = async function () {
     var prenom = document.getElementById("newTeacherPrenom").value.trim();
     var nom = document.getElementById("newTeacherNom").value.trim();
     var role = document.getElementById("newTeacherRole").value;
     if (!prenom || !nom) { toast("Prénom et nom requis."); return; }
-    var res = TEACHER_AUTH.createAccount(prenom, nom, role);
+    var res = await TEACHER_AUTH.createAccount(prenom, nom, role);
     document.getElementById("newTeacherPrenom").value = "";
     document.getElementById("newTeacherNom").value = "";
     renderTeacherTab("enseignants");
     var r = document.getElementById("newTeacherResult");
     if (r) r.innerHTML = '<div class="feedback feedback--good"><strong>✅ Compte créé</strong><br>Identifiant : <code>' + res.account.login + '</code><br>Mot de passe : <code>' + res.password + '</code><br><span class="muted" style="font-size:.75rem;">Note ce mot de passe, il ne sera plus affiché.</span></div>';
   };
-  window.resetTeacherPwd = function (id) {
+  window.resetTeacherPwd = async function (id) {
     if (!confirm("Réinitialiser le mot de passe de ce compte ?")) return;
-    var pwd = TEACHER_AUTH.resetPassword(id);
+    var pwd = await TEACHER_AUTH.resetPassword(id);
     if (pwd) {
       openModal('<h3 style="color:var(--c-primary);">🔄 Mot de passe réinitialisé</h3><p>Nouveau mot de passe : <code style="font-size:1.1rem;background:#f1f5f9;padding:4px 8px;border-radius:6px;">' + pwd + '</code></p><p class="muted" style="font-size:.8rem;">Note ce mot de passe, il ne sera plus affiché.</p><button class="btn btn--primary" onclick="closeModal()">OK</button>');
     }
@@ -2008,7 +2032,8 @@
     if (p1 !== p2) { toast("Les mots de passe ne correspondent pas."); return; }
     if (isTeacher) {
       var acc = TEACHER_AUTH.currentUser;
-      acc.passwordHash = TEACHER_AUTH.hash(p1);
+      acc.passwordHash = await TEACHER_AUTH.hashPassword(p1);
+      acc.hashAlgo = "pbkdf2-sha256";
       acc.mustChangePassword = false;
       await TEACHER_AUTH.saveAccounts();
       STATE.forcePasswordChange = false;
@@ -2018,7 +2043,8 @@
       renderTeacher();
     } else {
       var acc2 = AUTH.currentUser;
-      acc2.passwordHash = AUTH.hash(p1);
+      acc2.passwordHash = await AUTH.hashPassword(p1);
+      acc2.hashAlgo = "pbkdf2-sha256";
       acc2.mustChangePassword = false;
       await AUTH.saveAccounts();
       STATE.forcePasswordChange = false;
@@ -2046,17 +2072,18 @@
       var tacc = await TEACHER_AUTH.loadAccounts();
       TEACHER_AUTH.accounts = tacc || [];
     } catch (e) { TEACHER_AUTH.accounts = []; }
-    // Compte enseignant par defaut si aucun
+    // Compte enseignant par defaut si aucun (hash PBKDF2 asynchrone)
     if (TEACHER_AUTH.accounts.length === 0) {
       TEACHER_AUTH.accounts.push({
         id: "t_default",
         login: "enseignant",
-        passwordHash: TEACHER_AUTH.hash("ecbg2026"),
+        passwordHash: await TEACHER_AUTH.hashPassword("ecbg2026"),
+        hashAlgo: "pbkdf2-sha256",
         prenom: "Enseignant", nom: "", role: "enseignant",
         created: new Date().toLocaleString("fr-FR"),
         mustChangePassword: true
       });
-      TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccounts();
     }
     // Migration one-time : copier les donnees localStorage vers Supabase
     (async function migrateLocalStorage() {
