@@ -116,5 +116,25 @@ Contrôles effectués en lecture seule avec la clé publishable :
 | `GET /simassp_identities` sans token | `401 permission denied` | Correct : table sans grant pour `anon` |
 | RPC `simassp_public_account/teacher`, `simassp_my_owner`, `simassp_is_teacher`, `simassp_student_global_set` | répondent | Le SQL de l'Option B a bien été appliqué |
 
-👉 Actions restantes : activer Anonymous Sign-Ins **et** exécuter `docs/RLS_CORRECTIF.sql`,
-puis relancer la validation réelle avant tout test d'écriture.
+### Validation finale (19/11/2026, après correction)
+
+Tous les contrôles réels en lecture sont conformes :
+
+| Contrôle | Résultat |
+|---|---|
+| `GET /auth/v1/settings` → `external.anonymous_users` | `true` |
+| `POST /auth/v1/signup` (anonyme) | `200` + JWT `role=authenticated`, `is_anonymous=true` |
+| `GET /simassp_kv` **sans token** | `401 permission denied` |
+| `GET /simassp_kv` avec token mais sans `claim` | `[]` |
+| `simassp_student_snapshot_get` sans `claim` | `{}` |
+| `simassp_claim` avec un mauvais mot de passe | `false`, aucune ligne créée |
+| RPC de lookup (`simassp_public_account` / `_teacher`) | répondent |
+| `GET /simassp_identities` sans token | `401 permission denied` |
+
+La suite de tests locale reste verte : `node --check` (app/crypto/supabase/storage/sw),
+`verif_auth_pbkdf2.py`, `verif_rls_option_b.py`, `verif_ameliorations.py`,
+`verif_navigateur_plage.py` (102/102), `audit_scenarios.js`.
+
+Reste à valider côté utilisateur : chargement de l'app sur **PC + téléphone**, connexion avec
+un compte élève existant, puis vérification que la progression remonte dans l'espace enseignant.
+Aucun test d'écriture n'a été effectué sur le projet de production.
