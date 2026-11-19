@@ -30,7 +30,9 @@ Une fenêtre de protection de 5 secondes après chaque écriture locale empêche
 
 Les mots de passe sont hachés avec **PBKDF2-SHA-256** (150 000 itérations, sel aléatoire de 16 octets, empreinte 256 bits) via l'API Web Crypto (`js/crypto.js`). L'ancien format `btoa` réversible est encore accepté **une seule fois** lors d'une connexion réussie, puis automatiquement remplacé par un hash PBKDF2.
 
-⚠️ **Point de vigilance RLS** : la table Supabase `simassp_kv` est actuellement lisible avec la clé publishable (rôle `anon`). L'audit complet et les deux options de correction sont décrits dans [`docs/RLS_SUPABASE.md`](docs/RLS_SUPABASE.md). Aucune donnée de santé réelle n'est stockée.
+**Isolation des données (Option B — retenue le 19/11/2026).** Le client ouvre une session **Supabase Auth anonyme** persistée sur l'appareil. À chaque connexion, il revendique son compte auprès du serveur avec une **preuve PBKDF2** : le mot de passe en clair ne quitte jamais le navigateur. Les policies RLS limitent alors chaque élève à ses propres lignes ; l'enseignant conserve un accès complet. Les blobs partagés (`students_data`, `pfmp`, `tuteur_evals`) ne sont accessibles à l'élève que par des RPC ciblées sur sa propre clé.
+
+⚠️ **Action requise côté dashboard Supabase** : activer *Authentication → Providers → Anonymous Sign-Ins*, puis exécuter [`docs/RLS_MIGRATION.sql`](docs/RLS_MIGRATION.sql). Tant que ce script n'est pas appliqué, l'application replie automatiquement sur son mode de fonctionnement antérieur (via le cache local et les RPC absentes). L'audit initial, le détail de l'option retenue et les risques résiduels sont dans [`docs/RLS_SUPABASE.md`](docs/RLS_SUPABASE.md). Aucune donnée de santé réelle n'est stockée.
 
 ## 📱 Installation hors-ligne (PWA)
 
@@ -59,15 +61,17 @@ SimASSP/
 │   ├── data.js             # compétences, scénarios, critères
 │   ├── scenarios_extra.js  # scénarios additionnels (total 102)
 │   ├── storage.js          # cache local + passerelle Supabase + garde anti-effacement
-│   ├── supabase.js         # client Supabase + realtime
+│   ├── supabase.js         # session anonyme, helpers RLS (lookup/claim/snapshot) + realtime
 │   └── app.js              # logique applicative (navigation, filtres, carnet, bilans)
 ├── docs/
-│   └── RLS_SUPABASE.md     # audit RLS + options de correction
+│   ├── RLS_SUPABASE.md     # audit RLS, option B retenue, risques résiduels
+│   └── RLS_MIGRATION.sql   # script à exécuter dans le dashboard Supabase
 ├── tools/
 │   ├── audit_scenarios.js        # validation structurelle des 102 scénarios
 │   ├── gen_icons.py              # régénération des icônes PWA
 │   ├── verif_ameliorations.py    # filtres, carnet, navigation, PBKDF2, PWA hors-ligne
 │   ├── verif_auth_pbkdf2.py      # migration, création, reset, changement de mot de passe
+│   ├── verif_rls_option_b.py     # RPC simulées : claim, migration, isolation, repli
 │   └── verif_navigateur_plage.py # validation navigateur de tous les scénarios
 └── README.md
 ```
@@ -78,21 +82,22 @@ Ouvrir `index.html` dans un navigateur. Aucune installation requise.
 
 Vérifications avant publication :
 ```bash
-node --check js/app.js && node --check js/crypto.js && node --check sw.js
+node --check js/app.js && node --check js/crypto.js && node --check js/supabase.js && node --check sw.js
 node tools/audit_scenarios.js S1-S126
 python -X utf8 tools/verif_auth_pbkdf2.py
+python -X utf8 tools/verif_rls_option_b.py
 python -X utf8 tools/verif_navigateur_plage.py 1 126
 python -X utf8 tools/verif_ameliorations.py
 ```
 
-Les tests Playwright bloquent `*.supabase.co` : ils n'écrivent jamais dans le projet de production.
+Les tests Playwright bloquent `*.supabase.co` : ils n'écrivent jamais dans le projet de production. `verif_rls_option_b.py` remplace le SDK par un faux injecté dans le navigateur : les RPC sont simulées en mémoire et le vrai code client est exercé.
 
 ## 🎯 Évolutions prévues
 
 - Scénarios vocaux et vidéos de gestes professionnels
 - Cas aléatoires et variantes (personne anxieuse, famille présente, urgence)
 - Recommandations personnalisées et parcours adaptatif
-- Isolation réelle des données par élève : migration vers Supabase Auth + RLS (voir `docs/RLS_SUPABASE.md`, nécessite une décision et un accès au dashboard Supabase)
+- Application de [`docs/RLS_MIGRATION.sql`](docs/RLS_MIGRATION.sql) dans le dashboard Supabase + validation croisée PC/téléphone (action enseignant, une seule fois)
 
 ## 📄 Licence
 

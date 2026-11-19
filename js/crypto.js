@@ -102,10 +102,31 @@
     return { ok: constantTimeEqual(actual, expected), upgraded: null };
   }
 
+  /**
+   * Preuve à envoyer au serveur pour revendiquer un compte (RLS).
+   * - hash PBKDF2 : base64 de l'empreinte dérivée (le serveur la compare au hash stocké).
+   * - hash legacy : la chaîne base64 d'origine (comparable telle quelle).
+   * Le mot de passe en clair ne quitte jamais le navigateur.
+   */
+  async function proofFor(password, stored) {
+    if (typeof stored !== "string" || !stored) return null;
+    if (stored.indexOf(PREFIX) !== 0) return legacyHash(password);
+    var parts = stored.split("$");
+    if (parts.length !== 4) return null;
+    var iterations = parseInt(parts[1], 10);
+    if (!iterations || iterations < 10000 || iterations > 1000000) return null;
+    try {
+      return bytesToB64(await deriveBits(password, b64ToBytes(parts[2]), iterations));
+    } catch (e) {
+      return null;
+    }
+  }
+
   window.SimASSPCrypto = {
     hash: hash,
     verify: verify,
     legacyHash: legacyHash,
+    proofFor: proofFor,
     ITERATIONS: ITERATIONS,
     isPbkdf2: function (stored) { return typeof stored === "string" && stored.indexOf(PREFIX) === 0; }
   };

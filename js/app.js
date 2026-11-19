@@ -21,7 +21,7 @@
         acc.passwordHash = res.upgraded;
         acc.hashAlgo = "pbkdf2-sha256";
         try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
-        await AUTH.saveAccounts();
+        await AUTH.saveAccount(acc);
       }
       return true;
     },
@@ -63,6 +63,13 @@
       }
       try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
     },
+    // Ecriture ciblee : sous RLS, un eleve ne peut ecrire QUE sa propre ligne.
+    saveAccount: async function (acc) {
+      if (window.Storage) {
+        try { await window.Storage.set("accounts", acc.id, acc); } catch (e) {}
+      }
+      try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
+    },
     genPassword: function () {
       var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
       var p = "";
@@ -79,9 +86,38 @@
       for (var i = 0; i < AUTH.accounts.length; i++) {
         if (AUTH.accounts[i].login === login) { acc = AUTH.accounts[i]; break; }
       }
+
+      // --- Isolation RLS : le serveur fait foi pour le hash et l'identite ---
+      if (window.SimASSPAuth && window.SimASSPAuth.ready) {
+        var remote = await window.SimASSPAuth.lookup(login, "student");
+        if (remote && remote.id && remote.passwordHash) {
+          if (!acc) {
+            acc = { id: remote.id, login: remote.login, passwordHash: remote.passwordHash,
+                    prenom: "", nom: "", niveau: "2", classe: "", created: "", mustChangePassword: false };
+            AUTH.accounts.push(acc);
+          } else {
+            acc.passwordHash = remote.passwordHash;
+          }
+          var proof = await window.SimASSPCrypto.proofFor(pwd, remote.passwordHash);
+          var upgrade = window.SimASSPCrypto.isPbkdf2(remote.passwordHash) ? null
+                      : await window.SimASSPCrypto.hash(pwd);
+          var claimed = await window.SimASSPAuth.claim(remote.id, proof, "student", upgrade);
+          if (!claimed) return false; // RLS active : sans rattachement, pas d'acces aux donnees
+          if (upgrade) {
+            acc.passwordHash = upgrade;
+            acc.hashAlgo = "pbkdf2-sha256";
+            await AUTH.saveAccount(acc);
+          }
+        }
+      }
+
       if (!acc) return false;
       if (!(await AUTH.verifyAndUpgrade(acc, pwd))) return false;
       AUTH.currentUser = acc;
+      // Récupérer le snapshot transmis à l'enseignant (RPC sécurisée).
+      if (window.SimASSPAuth && window.SimASSPAuth.ready) {
+        try { await window.SimASSPAuth.refreshStudentGlobals(acc.login); } catch (e) {}
+      }
       // Pas de restauration automatique : on ne persiste pas la session.
       try { sessionStorage.removeItem("simassp_session"); } catch (e) {}
       return true;
@@ -192,7 +228,7 @@
         acc.passwordHash = res.upgraded;
         acc.hashAlgo = "pbkdf2-sha256";
         try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
-        await TEACHER_AUTH.saveAccounts();
+        await TEACHER_AUTH.saveAccount(acc);
       }
       return true;
     },
@@ -228,6 +264,14 @@
       }
       try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
     },
+    // Ecriture ciblee : un enseignant peut ecrire toutes les lignes, mais on
+    // limite tout de meme aux comptes presents en memoire pour eviter le bruit.
+    saveAccount: async function (acc) {
+      if (window.Storage) {
+        try { await window.Storage.set("teachers", acc.id, acc); } catch (e) {}
+      }
+      try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
+    },
     genPassword: AUTH.genPassword,
     genLogin: function (prenom, nom) {
       var base = (prenom.charAt(0) + nom).toLowerCase().replace(/[^a-z]/g, "");
@@ -239,6 +283,36 @@
       for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
         if (TEACHER_AUTH.accounts[i].login === login) { acc = TEACHER_AUTH.accounts[i]; break; }
       }
+
+      // --- Isolation RLS : le serveur fait foi pour le hash et l'identite ---
+      if (window.SimASSPAuth && window.SimASSPAuth.ready) {
+        var remote = await window.SimASSPAuth.lookup(login, "teacher");
+        if (remote && remote.id && remote.passwordHash) {
+          if (!acc) {
+            acc = { id: remote.id, login: remote.login, passwordHash: remote.passwordHash,
+                    prenom: "", nom: "", role: "enseignant", created: "", mustChangePassword: false };
+            TEACHER_AUTH.accounts.push(acc);
+          } else {
+            acc.passwordHash = remote.passwordHash;
+          }
+          var proof = await window.SimASSPCrypto.proofFor(pwd, remote.passwordHash);
+          var upgrade = window.SimASSPCrypto.isPbkdf2(remote.passwordHash) ? null
+                      : await window.SimASSPCrypto.hash(pwd);
+          var claimed = await window.SimASSPAuth.claim(remote.id, proof, "teacher", upgrade);
+          if (!claimed) return false;
+          if (upgrade) {
+            acc.passwordHash = upgrade;
+            acc.hashAlgo = "pbkdf2-sha256";
+            await TEACHER_AUTH.saveAccount(acc);
+          }
+          // Une fois reconnu comme enseignant, recharger la liste complete
+          // (avant le claim, la RLS ne laissait voir aucune ligne).
+          TEACHER_AUTH.loadAccounts().then(function (list) {
+            if (list && list.length) TEACHER_AUTH.accounts = list;
+          }).catch(function () {});
+        }
+      }
+
       if (!acc) return false;
       if (!(await TEACHER_AUTH.verifyAndUpgrade(acc, pwd))) return false;
       TEACHER_AUTH.currentUser = acc;
@@ -460,8 +534,14 @@
     }
     return cached;
   }
-  function savePFMP(obj) {
+  async function savePFMP(obj) {
     try { localStorage.setItem("simassp_pfmp", JSON.stringify(obj)); markLocalWrite("simassp_pfmp"); } catch (e) {}
+    // Sous RLS, un élève n'écrit QUE sa propre clé du blob global pfmp.
+    var u = AUTH.currentUser;
+    if (u && window.SimASSPAuth && window.SimASSPAuth.ready) {
+      var result = await window.SimASSPAuth.setGlobalKey("pfmp", obj[u.login] || {});
+      if (result !== null) return;
+    }
     if (window.Storage) {
       window.Storage.set("pfmp", "global", obj).catch(function () {});
     }
@@ -1183,7 +1263,7 @@
       })() +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn--primary" onclick="saveStudentData();toast(\'Données enregistrées pour l\\\'enseignant ✅\')">💾 Enregistrer mes données pour l\'enseignant</button><button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportData()">📤 Exporter mes données</button></div>';
   }
-  function saveStudentData() {
+  async function saveStudentData() {
     var u = AUTH.currentUser;
     if (!u) return;
     var students = loadStudentsData();
@@ -1195,7 +1275,16 @@
     students[u.login].autoeval = loadAutoeval() || {};
     students[u.login].history = loadHistory() || [];
     students[u.login].imported = new Date().toLocaleString("fr-FR");
-    saveStudentsData(students);
+
+    // Sous RLS, l'élève n'écrit QUE sa propre clé via une RPC sécurisée.
+    if (window.SimASSPAuth && window.SimASSPAuth.ready) {
+      var result = await window.SimASSPAuth.setSnapshot(students[u.login]);
+      if (result !== null) {
+        try { localStorage.setItem("simassp_students_data", JSON.stringify(students)); } catch (e) {}
+        return;
+      }
+    }
+    saveStudentsData(students); // repli : ancien schéma sans RLS
   }
   window.saveStudentData = saveStudentData;
   window.exportData = function () {
@@ -2046,7 +2135,7 @@
       acc2.passwordHash = await AUTH.hashPassword(p1);
       acc2.hashAlgo = "pbkdf2-sha256";
       acc2.mustChangePassword = false;
-      await AUTH.saveAccounts();
+      await AUTH.saveAccount(acc2);
       STATE.forcePasswordChange = false;
       closeModal();
       toast("Mot de passe modifié ✅");

@@ -1,6 +1,6 @@
-# Audit RLS Supabase — SimASSP (19/11/2026)
+# RLS Supabase — SimASSP (19/11/2026)
 
-## Constat
+## 1. Audit initial
 
 Requête en lecture seule effectuée avec la clé **publishable** exposée dans `js/supabase.js` :
 
@@ -13,71 +13,87 @@ GET https://jipiobgwkunqgkffdmqk.supabase.co/rest/v1/simassp_kv?select=namespace
     {"namespace":"accounts","owner":"u_..."}, ...]
 ```
 
-👉 **La table `simassp_kv` est lisible anonymement depuis n'importe quel navigateur.**
-RLS est soit désactivée, soit configurée avec une politique autorisant le rôle `anon` à tout lire.
+👉 **La table `simassp_kv` était lisible anonymement depuis n'importe quel navigateur.**
+RLS était soit désactivée, soit configurée avec une politique autorisant le rôle `anon` à tout lire.
 
-Aucune écriture n'a été effectuée pendant cet audit (les tests Playwright bloquent désormais
-`*.supabase.co` via `context.route(...)` pour éviter toute modification du projet de production).
+Aucune écriture n'a été effectuée pendant cet audit : les tests Playwright bloquent `*.supabase.co`
+via `context.route(...)` pour éviter toute modification du projet de production.
 
-## Pourquoi ce n'est pas corrigeable uniquement côté client
+## 2. Pourquoi une policy `owner = auth.uid()` ne suffit pas
 
-L'application utilise uniquement la clé publishable et **ne fait jamais appel à Supabase Auth**
-(`persistSession: false`, aucun `signIn*`). Tous les élèves partagent donc le même rôle PostgREST `anon`.
+L'application utilisait uniquement la clé publishable et **jamais Supabase Auth**
+(`persistSession: false`, aucun `signIn*`). Tous les navigateurs partageaient donc le rôle `anon`,
+pour lequel `auth.uid()` vaut `NULL` : une policy `owner = auth.uid()::text` aurait rendu la table
+totalement inaccessible.
 
-Une politique RLS du type :
+Le champ `owner` (`u_...`, `t_...`, `global`) est un identifiant **applicatif**, pas une identité
+Supabase. Une isolation réelle exige donc une migration vers Supabase Auth, sans renommer les
+identifiants existants.
 
-```sql
-owner = auth.uid()::text
-```
+## 3. Décision : Option B — isolation réelle
 
-**casserait l'application** : `auth.uid()` est `NULL` pour toutes les requêtes, donc plus aucune
-ligne ne serait lisible/écrivable.
+L'utilisateur a retenu l'**Option B** le 19/11/2026.
 
-Le champ `owner` utilisé aujourd'hui (`u_...`, `t_...`, `global`) est un identifiant applicatif,
-pas une identité Supabase. Le rendre étanche exige une migration vers Supabase Auth.
+### Principe
 
-## Ce qui a été renforcé maintenant
+- Le client Supabase ouvre une **session anonyme persistée** sur l'appareil
+  (`supabase.auth.signInAnonymously()`, `storageKey: "simassp-auth"`).
+- À chaque connexion à SimASSP, le client appelle une RPC qui **revendique le compte** :
+  il envoie une **preuve PBKDF2** calculée localement (jamais le mot de passe en clair).
+- Une table `simassp_identities` associe `app_owner` (`u_...`/`t_...`) ↔ `auth_uid`.
+  Les policies RLS comparent `owner` à `simassp_my_owner()`.
+- **Un uid = au plus un compte**, mais **un compte = plusieurs uid** : PC et téléphone peuvent
+  revendiquer le même élève. Le rattachement est donc réversible et sans migration des lignes.
+- Les blobs globaux ne sont plus lisibles en entier par un élève. Des RPC ciblées ne touchent
+  que sa clé de login dans `students_data`, `pfmp` et `tuteur_evals`. L'enseignant garde un accès
+  direct complet.
 
-- Les mots de passe ne sont plus stockés en base64 réversible : **PBKDF2-SHA-256, 150 000 itérations,
-  sel aléatoire 16 octets** (`js/crypto.js`). Les anciens hash base64 sont convertis à la première
-  connexion réussie.
-- Les tests n'écrivent plus dans Supabase.
+### Fichiers
 
-Reste exposé tant que RLS n'est pas corrigée : noms/prénoms des comptes, classes, progression,
-historique de scénarios, PFMP, évaluations tuteur. Aucune donnée de santé réelle n'est stockée.
+| Fichier | Rôle |
+|---|---|
+| `docs/RLS_MIGRATION.sql` | Script à exécuter **une fois** dans le dashboard Supabase |
+| `js/supabase.js` | Session anonyme + `SimASSPAuth` (lookup, claim, snapshot, repli) |
+| `js/crypto.js` | `proofFor()` : preuve PBKDF2 sans exposer le mot de passe |
+| `js/app.js` | Câblage login élève/prof, migration legacy, écritures ciblées |
+| `tools/verif_rls_option_b.py` | Test navigateur avec RPC simulées (aucune écriture production) |
 
-## Deux options
+## 4. Procédure côté dashboard Supabase (action enseignant)
 
-### Option A — minimale (dashboard Supabase, sans casser l'existant)
+1. **Authentication → Providers → Anonymous Sign-Ins → Enable**, puis Save.
+2. **SQL Editor → New query** : coller l'intégralité de `docs/RLS_MIGRATION.sql`, exécuter.
+   Le script est transactionnel (`begin`/`commit`) et ne supprime aucune donnée applicative.
+3. Vérification en lecture seule (fournie en fin de script) :
+   - les policies `simassp_kv lecture/insertion/modification/suppression` existent ;
+   - les fonctions `simassp_*` existent ;
+   - un navigateur **non connecté** obtient `0 ligne` sur `GET /rest/v1/simassp_kv`.
+4. Recharger SimASSP sur le PC **et** le téléphone, se connecter avec un compte élève, puis
+   vérifier que la progression remonte dans l'espace enseignant depuis les deux appareils.
 
-Activer RLS tout en conservant le comportement actuel, pour au moins rendre la situation explicite
-et auditable. Dans **Supabase → Authentication / Policies** (ou SQL Editor) :
+## 5. Repli automatique
 
-```sql
-ALTER TABLE public.simassp_kv ENABLE ROW LEVEL SECURITY;
+Tant que le SQL n'est pas appliqué ou si Anonymous Sign-Ins est désactivé :
 
--- Lecture/écriture autorisées pour le rôle anon afin de préserver le fonctionnement actuel.
-CREATE POLICY "simassp_kv anon select" ON public.simassp_kv
-  FOR SELECT TO anon USING (true);
-CREATE POLICY "simassp_kv anon insert" ON public.simassp_kv
-  FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "simassp_kv anon update" ON public.simassp_kv
-  FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "simassp_kv anon delete" ON public.simassp_kv
-  FOR DELETE TO anon USING (true);
-```
+- `SimASSPAuth.ready` reste `false` (ou les RPC renvoient « function does not exist ») ;
+- `lookup()` renvoie `null`, `claim()` n'est pas appelé, le snapshot n'est pas chargé ;
+- l'authentification et la sauvegarde continuent par le cache local + l'ancienne passerelle
+  Supabase, exactement comme avant le 19/11.
 
-⚠️ Cela ne protège pas les données : cela documente seulement l'accès. À ne faire que si l'option B
-est repoussée.
+Aucune casse fonctionnelle n'est donc à craindre entre le déploiement du code et l'application
+du SQL.
 
-### Option B — isolation réelle (à valider avant chantier)
+## 6. Risques résiduels assumés
 
-1. Activer **Anonymous Sign-Ins** dans Supabase Auth.
-2. Dans `js/supabase.js` : `await supabase.auth.signInAnonymously()` au démarrage, session persistée.
-3. Remplacer les `owner` applicatifs par `auth.uid()` pour `progress`, `autoeval`, `history`, `pfmp`.
-4. RLS : `owner = auth.uid()::text` pour ces namespaces.
-5. Les comptes élèves (`accounts`) doivent rester lisibles par l'enseignant : soit table séparée avec
-   policy `role enseignant` (JWT custom claim), soit vue RPC sécurisée.
-6. Migration one-time des données existantes (mapping `u_...` → nouvel uid) + test PC/téléphone.
+| Risque | Analyse |
+|---|---|
+| **Le lookup public renvoie le hash PBKDF2 au rôle `anon`** | Nécessaire pour dériver la preuve côté client sans envoyer le mot de passe. Un attaquant peut tenter une attaque hors-ligne (PBKDF2 150 000 itérations ralentit fortement l'attaque). Comptes fictifs, aucune donnée de santé réelle. Une future version pourrait déplacer la vérification côté serveur. |
+| **Un uid réassigné à chaque connexion** | Si le même navigateur se connecte successivement à deux comptes, seule la dernière identité reste active. Il suffit de se reconnecter pour retrouver l'accès. Choix délibéré : un navigateur = un compte à la fois. |
+| **Conflit d'écritures concurrentes sur les blobs globaux** | Deux élèves qui enregistrent simultanément fusionnent leur clé dans le même JSON. La RPC lit et réécrit le blob en une instruction ; un verrou optimiste pourrait être ajouté si le besoin se présentait. |
+| **Cache localStorage partagé** | Sur un poste partagé, le cache local d'un élève peut contenir les données d'un autre compte si ceux-ci se sont succédé sans nettoyage du navigateur. La RLS protège le cloud, pas le stockage local du navigateur. |
+| **Lecteur de l'enseignant** | L'enseignant lit tout par conception (rôle pédagogique). C'est un choix fonctionnel, pas une faille. |
 
-C'est le seul moyen d'obtenir une vraie séparation des données par élève. Chantier à décider.
+## 7. Options écartées
+
+- **Option A** — activer RLS en laissant le rôle `anon` tout voir : rendait l'accès explicite et
+  auditable, mais n'apportait **aucune** protection réelle. Écartée au profit de l'option B.
+- **Laisser en l'état** : écarté après confirmation de la lecture anonyme.
