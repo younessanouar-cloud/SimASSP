@@ -330,18 +330,33 @@
     if (window.Storage) window.Storage.set(ns, owner, data).catch(function () {});
   }
 
+  // Garde anti-ecrasement : une lecture Supabase en retard ne doit jamais
+  // remplacer une ecriture locale toute fraiche (ex. fin de scenario puis bilan).
+  var CACHE_WRITE_WINDOW_MS = 5000;
+  function markLocalWrite(key) {
+    try { localStorage.setItem(key + "__wr", String(Date.now())); } catch (e) {}
+  }
+  function recentlyWrittenLocally(key) {
+    try {
+      var t = Number(localStorage.getItem(key + "__wr") || 0);
+      return !!t && (Date.now() - t) < CACHE_WRITE_WINDOW_MS;
+    } catch (e) { return false; }
+  }
+
   function loadProgression() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    var key = "simassp_progress_" + uid;
     // Cache local synchrone
     var cached = {};
-    try { cached = JSON.parse(localStorage.getItem("simassp_progress_" + uid) || "{}"); } catch (e) { cached = {}; }
-    if (migrateCompKeys(cached, true)) persistMigrated("progress", uid, cached, "simassp_progress_" + uid);
+    try { cached = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { cached = {}; }
+    if (migrateCompKeys(cached, true)) persistMigrated("progress", uid, cached, key);
     // Supabase async (mise a jour du cache en arriere-plan)
     if (window.Storage) {
       window.Storage.get("progress", uid).then(function (d) {
+        if (recentlyWrittenLocally(key)) return;
         if (d) {
           if (migrateCompKeys(d, true)) persistMigrated("progress", uid, d, null);
-          try { STATE.progression = d; localStorage.setItem("simassp_progress_" + uid, JSON.stringify(d)); } catch (e) {}
+          try { STATE.progression = d; localStorage.setItem(key, JSON.stringify(d)); } catch (e) {}
           try { renderProgression && renderProgression(); } catch (e) {}
         }
       }).catch(function () {});
@@ -350,19 +365,22 @@
   }
   function saveProgression() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
-    try { localStorage.setItem("simassp_progress_" + uid, JSON.stringify(STATE.progression)); } catch (e) {}
+    var key = "simassp_progress_" + uid;
+    try { localStorage.setItem(key, JSON.stringify(STATE.progression)); markLocalWrite(key); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("progress", uid, STATE.progression).catch(function () {});
     }
   }
   function loadAutoeval() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    var key = "simassp_autoeval_" + uid;
     var cached = {};
-    try { cached = JSON.parse(localStorage.getItem("simassp_autoeval_" + uid) || "{}"); } catch (e) { cached = {}; }
+    try { cached = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { cached = {}; }
     if (window.Storage) {
       window.Storage.get("autoeval", uid).then(function (d) {
+        if (recentlyWrittenLocally(key)) return;
         if (d) {
-          try { STATE.autoeval = d; localStorage.setItem("simassp_autoeval_" + uid, JSON.stringify(d)); } catch (e) {}
+          try { STATE.autoeval = d; localStorage.setItem(key, JSON.stringify(d)); } catch (e) {}
           try { renderAutoeval && renderAutoeval(); } catch (e) {}
         }
       }).catch(function () {});
@@ -371,19 +389,22 @@
   }
   function saveAutoeval() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
-    try { localStorage.setItem("simassp_autoeval_" + uid, JSON.stringify(STATE.autoeval)); } catch (e) {}
+    var key = "simassp_autoeval_" + uid;
+    try { localStorage.setItem(key, JSON.stringify(STATE.autoeval)); markLocalWrite(key); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("autoeval", uid, STATE.autoeval).catch(function () {});
     }
   }
   function loadHistory() {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
+    var key = "simassp_history_" + uid;
     var cached = [];
-    try { cached = JSON.parse(localStorage.getItem("simassp_history_" + uid) || "[]"); } catch (e) { cached = []; }
+    try { cached = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { cached = []; }
     if (window.Storage) {
       window.Storage.get("history", uid).then(function (d) {
+        if (recentlyWrittenLocally(key)) return;
         if (d) {
-          try { localStorage.setItem("simassp_history_" + uid, JSON.stringify(d)); } catch (e) {}
+          try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {}
         }
       }).catch(function () {});
     }
@@ -391,7 +412,8 @@
   }
   function saveHistory(hist) {
     var uid = AUTH.currentUser ? AUTH.currentUser.id : "anon";
-    try { localStorage.setItem("simassp_history_" + uid, JSON.stringify(hist)); } catch (e) {}
+    var key = "simassp_history_" + uid;
+    try { localStorage.setItem(key, JSON.stringify(hist)); markLocalWrite(key); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("history", uid, hist).catch(function () {});
     }
@@ -407,19 +429,21 @@
     { id: "PFMP6", niveau: "T", numero: 2, titre: "PFMP 6 — Terminale — Période 2", objectifs: "Projet individualisé complet, éducation à la santé, démarche qualité et autonomie." }
   ];
   function loadPFMP() {
+    var key = "simassp_pfmp";
     var cached = {};
-    try { cached = JSON.parse(localStorage.getItem("simassp_pfmp") || "{}"); } catch (e) { cached = {}; }
+    try { cached = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { cached = {}; }
     if (window.Storage) {
       window.Storage.get("pfmp", "global").then(function (d) {
+        if (recentlyWrittenLocally(key)) return;
         if (d) {
-          try { localStorage.setItem("simassp_pfmp", JSON.stringify(d)); } catch (e) {}
+          try { localStorage.setItem(key, JSON.stringify(d)); } catch (e) {}
         }
       }).catch(function () {});
     }
     return cached;
   }
   function savePFMP(obj) {
-    try { localStorage.setItem("simassp_pfmp", JSON.stringify(obj)); } catch (e) {}
+    try { localStorage.setItem("simassp_pfmp", JSON.stringify(obj)); markLocalWrite("simassp_pfmp"); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("pfmp", "global", obj).catch(function () {});
     }
@@ -462,6 +486,7 @@
     hintLevel: 0,
     autoeval: {},
     progression: {},
+    scenarioFilters: { q: "", bloc: "all", annee: "all" },
     teacherAuth: false,
     forcePasswordChange: false
   };
@@ -471,6 +496,9 @@
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser && !TEACHER_AUTH.currentUser) { name = "login"; }
+    // Un enseignant connecte ne doit jamais quitter son espace vers une vue eleve :
+    // la nav est masquee en mode enseignant, il n'aurait aucun moyen d'y revenir.
+    if (TEACHER_AUTH.currentUser && name !== "login" && name !== "enseignant") { name = "enseignant"; }
     // L'espace enseignant est un espace distinct : on deconnecte l'eleve pour y entrer.
     if (name === "enseignant" && AUTH.currentUser && !TEACHER_AUTH.currentUser) {
       AUTH.logout();
@@ -559,6 +587,14 @@
     // Masquer l'acces enseignant dans la nav quand un eleve est connecte.
     var teacherBtn = document.querySelector('.nav__btn--accent[data-nav="enseignant"]');
     if (teacherBtn) teacherBtn.hidden = !!AUTH.currentUser || isTeacher;
+    // Le logo ramene a l'espace enseignant tant que l'enseignant est connecte,
+    // a l'accueil eleve sinon (evite le piège de navigation du badge « Bac Pro ASSP »).
+    var brand = document.querySelector(".brand");
+    if (brand) {
+      var destination = isTeacher ? "enseignant" : "accueil";
+      brand.dataset.nav = destination;
+      brand.setAttribute("href", "#" + destination);
+    }
   }
 
   // ---------- LOGIN ----------
@@ -679,17 +715,74 @@
 
   // ---------- SCÉNARIOS ----------
   function diffLabel(d) { return d === 1 ? "🟢 Facile" : d === 2 ? "🟡 Moyen" : "🔴 Avancé"; }
-  function renderScenarios() {
-    var list = document.getElementById("scenarioList");
-    if (!list) return;
-    var randomBtn = '<button class="btn btn--accent btn--sm" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="openRandomScenario()">🎲 Scénario aléatoire</button>';
-    list.innerHTML = randomBtn + D.SCENARIOS.map(function (s) {
+  function normalizeSearch(s) {
+    return String(s || "").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function renderScenarioList() {
+    var items = document.getElementById("scenarioListItems");
+    if (!items) return;
+    var f = STATE.scenarioFilters || { q: "", bloc: "all", annee: "all" };
+    var q = normalizeSearch(f.q);
+    var filtered = D.SCENARIOS.filter(function (s) {
+      if (f.bloc !== "all" && s.bloc !== f.bloc) return false;
+      if (f.annee !== "all" && s.annee !== f.annee) return false;
+      if (!q) return true;
+      return normalizeSearch([s.titre, s.bloc, s.contexte, (s.competences || []).join(" ")].join(" ")).indexOf(q) !== -1;
+    });
+    var count = document.getElementById("scenarioCount");
+    if (count) count.textContent = filtered.length + " / " + D.SCENARIOS.length;
+    items.innerHTML = filtered.length ? filtered.map(function (s) {
       var b = D.BLOCS.filter(function (x) { return x.code === s.bloc; })[0];
       return '<div class="scenario-item ' + (STATE.scenario && STATE.scenario.id === s.id ? 'scenario-item--active' : '') + '" onclick="openScenario(\'' + s.id + '\')">' +
         '<div class="scenario-item__title">' + b.emoji + ' ' + s.titre + '</div>' +
         '<div class="scenario-item__meta">' + s.bloc + ' · ' + (s.annee === "2" ? "2de" : s.annee === "1" ? "1re" : "Tle") + ' · ' + s.contexte + ' · ' + s.duree + ' · ' + diffLabel(s.difficulte || 1) + '</div>' +
         '</div>';
+    }).join("") : '<div class="empty-state" style="padding:20px 8px;"><div class="empty-state__icon">🔍</div><p>Aucun scénario ne correspond à ces filtres.</p></div>';
+  }
+  window.applyScenarioFilters = function () {
+    var q = document.getElementById("scenarioSearch");
+    var b = document.getElementById("scenarioBlocFilter");
+    var a = document.getElementById("scenarioAnneeFilter");
+    if (q) STATE.scenarioFilters.q = q.value;
+    if (b) STATE.scenarioFilters.bloc = b.value;
+    if (a) STATE.scenarioFilters.annee = a.value;
+    renderScenarioList();
+  };
+  window.resetScenarioFilters = function () {
+    STATE.scenarioFilters = { q: "", bloc: "all", annee: "all" };
+    var q = document.getElementById("scenarioSearch");
+    var b = document.getElementById("scenarioBlocFilter");
+    var a = document.getElementById("scenarioAnneeFilter");
+    if (q) q.value = "";
+    if (b) b.value = "all";
+    if (a) a.value = "all";
+    renderScenarioList();
+  };
+  function renderScenarios() {
+    var list = document.getElementById("scenarioList");
+    if (!list) return;
+    var f = STATE.scenarioFilters;
+    var blocOpts = ["all", "B1", "B2", "B3", "B4"].map(function (code) {
+      return '<option value="' + code + '"' + (f.bloc === code ? ' selected' : '') + '>' + (code === "all" ? "Tous les blocs" : code) + '</option>';
     }).join("");
+    var anneeOpts = [["all", "Toutes"], ["2", "2de"], ["1", "1re"], ["T", "Tle"]].map(function (x) {
+      return '<option value="' + x[0] + '"' + (f.annee === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
+    }).join("");
+    list.innerHTML = '<div class="scenario-filters">' +
+      '<input type="search" id="scenarioSearch" class="input" placeholder="🔍 Rechercher un scénario…" value="' + escapeHtml(f.q) + '" aria-label="Rechercher un scénario" />' +
+      '<div class="scenario-filters__row"><select id="scenarioBlocFilter" class="input" aria-label="Filtrer par bloc">' + blocOpts + '</select>' +
+      '<select id="scenarioAnneeFilter" class="input" aria-label="Filtrer par année">' + anneeOpts + '</select></div>' +
+      '<div class="scenario-filters__count"><span id="scenarioCount">—</span> scénarios <button type="button" class="btn btn--sm btn--ghost" onclick="resetScenarioFilters()">Réinitialiser</button></div>' +
+      '</div>' +
+      '<button class="btn btn--accent btn--sm" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="openRandomScenario()">🎲 Scénario aléatoire</button>' +
+      '<div id="scenarioListItems"></div>';
+    var searchEl = document.getElementById("scenarioSearch");
+    if (searchEl) searchEl.addEventListener("input", window.applyScenarioFilters);
+    var blocEl = document.getElementById("scenarioBlocFilter");
+    if (blocEl) blocEl.addEventListener("change", window.applyScenarioFilters);
+    var anneeEl = document.getElementById("scenarioAnneeFilter");
+    if (anneeEl) anneeEl.addEventListener("change", window.applyScenarioFilters);
+    renderScenarioList();
     var detail = document.getElementById("scenarioDetail");
     if (!detail) return;
     if (!STATE.scenario) {
@@ -905,6 +998,12 @@
   }
   window.speak = speak;
   window.escapeJs = function (s) { return (s || "").replace(/'/g, "\\'").replace(/"/g, '\\"'); };
+  function escapeHtml(s) {
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  window.escapeHtml = escapeHtml;
 
   // ---------- AUTOÉVAL ----------
   function renderAutoeval() {
@@ -955,6 +1054,7 @@
     try { tuteur = JSON.parse(localStorage.getItem("simassp_tuteur_eval") || "{}"); } catch (e) {}
     if (window.Storage) {
       window.Storage.get("tuteur_eval", "global").then(function (d) {
+        if (recentlyWrittenLocally("simassp_tuteur_eval")) return;
         if (d) {
           try { localStorage.setItem("simassp_tuteur_eval", JSON.stringify(d)); } catch (e) {}
         }
@@ -1015,8 +1115,11 @@
       }).join("") + '</div>' +
       '<div class="chart-card"><h3>📜 Historique des scénarios</h3>' +
       (hist.length === 0 ? '<p class="muted">Aucun scénario réalisé pour l\'instant.</p>' :
-        '<div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>' +
-        hist.map(function (h) { return '<tr><td>' + h.date + '</td><td>' + h.scenario + (h.variant ? ' (' + h.variant + ')' : '') + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>'; }).join("") +
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th><th>🪞 Réflexivité</th></tr></thead><tbody>' +
+        hist.map(function (h) {
+          return '<tr><td>' + h.date + '</td><td>' + h.scenario + (h.variant ? ' (' + h.variant + ')' : '') + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td>' +
+            '<td style="font-size:.85rem;">' + (h.reflex ? escapeHtml(h.reflex) : '<span class="muted">—</span>') + '</td></tr>';
+        }).join("") +
         '</tbody></table></div>') +
       '</div>' +
       (function () {
@@ -1524,6 +1627,7 @@
     if (migrateCompKeys(cached, true)) persistMigrated("students_data", "global", cached, "simassp_students_data");
     if (window.Storage) {
       window.Storage.get("students_data", "global").then(function (d) {
+        if (recentlyWrittenLocally("simassp_students_data")) return;
         if (d) {
           if (migrateCompKeys(d, true)) persistMigrated("students_data", "global", d, null);
           try { localStorage.setItem("simassp_students_data", JSON.stringify(d)); } catch (e) {}
@@ -1533,7 +1637,7 @@
     return cached;
   }
   function saveStudentsData(obj) {
-    try { localStorage.setItem("simassp_students_data", JSON.stringify(obj)); } catch (e) {}
+    try { localStorage.setItem("simassp_students_data", JSON.stringify(obj)); markLocalWrite("simassp_students_data"); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("students_data", "global", obj).catch(function () {});
     }
@@ -1607,6 +1711,7 @@
     if (migrateCompKeys(cached, true)) persistMigrated("tuteur_evals", "global", cached, "simassp_tuteur_evals");
     if (window.Storage) {
       window.Storage.get("tuteur_evals", "global").then(function (d) {
+        if (recentlyWrittenLocally("simassp_tuteur_evals")) return;
         if (d) {
           if (migrateCompKeys(d, true)) persistMigrated("tuteur_evals", "global", d, null);
           try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(d)); } catch (e) {}
@@ -1616,7 +1721,7 @@
     return cached;
   }
   function saveTuteurEvals(obj) {
-    try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(obj)); } catch (e) {}
+    try { localStorage.setItem("simassp_tuteur_evals", JSON.stringify(obj)); markLocalWrite("simassp_tuteur_evals"); } catch (e) {}
     if (window.Storage) {
       window.Storage.set("tuteur_evals", "global", obj).catch(function () {});
     }
@@ -1694,7 +1799,21 @@
       '<h4 style="color:var(--c-primary);margin:14px 0 8px;">Suivi des eleves importes (' + Object.keys(students).length + ')</h4>' +
       (Object.keys(students).length === 0 ? '<p class="muted">Aucun eleve importe. Utilise "Importer donnees eleve" dans l\'onglet Suivi.</p>' :
         '<div class="table-wrap"><table class="table"><thead><tr><th>Eleve</th><th>Identifiant</th><th>Competences >=2</th><th>Niveau moyen</th><th>Dernier import</th></tr></thead><tbody>' + studentRows + '</tbody></table></div>') +
-      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">Exporter bilan PDF</button></div>';
+      (function () {
+        var entrees = (s.history || []).filter(function (h) { return h.reflex && String(h.reflex).trim(); });
+        var html = '<h4 style="color:var(--c-primary);margin:18px 0 8px;">🪞 Carnet de bord réflexif — ' + escapeHtml(studentName) + ' (' + entrees.length + ')</h4>';
+        if (!entrees.length) {
+          html += '<p class="muted" style="font-size:.85rem;">Aucune réflexion enregistrée. Elles apparaissent ici dès que l\'élève valide un scénario avec un commentaire.</p>';
+        } else {
+          html += '<div style="display:grid;gap:8px;">' + entrees.map(function (h) {
+            return '<div class="card" style="padding:10px 12px;border-left:3px solid var(--c-accent);">' +
+              '<div style="font-size:.8rem;color:var(--c-muted);">' + escapeHtml(h.date || '') + ' · ' + escapeHtml(h.scenario || '') + ' · ' + (h.score !== undefined ? h.score + '/' + h.total : '') + '</div>' +
+              '<div style="font-size:.9rem;white-space:pre-wrap;margin-top:4px;">' + escapeHtml(h.reflex) + '</div></div>';
+          }).join("") + '</div>';
+        }
+        return html;
+      })() +
+      '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn--accent btn--sm" onclick="exportBilanPDF()">Exporter bilan PDF</button><button class="btn btn--ghost btn--sm" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="exportCarnetPDF()">🪞 Exporter le carnet de bord PDF</button></div>';
     var sel = document.getElementById("bilanStudentSelect");
     if (sel) sel.addEventListener("change", function () {
       STATE.bilanSelectedStudent = this.value;
@@ -1738,6 +1857,7 @@
     }
     // compatibilite avec l'ancien stockage global
     localStorage.setItem("simassp_tuteur_eval", JSON.stringify(obj));
+    try { markLocalWrite("simassp_tuteur_eval"); } catch (e) {}
     if (window.Storage) { window.Storage.set("tuteur_eval", "global", obj).catch(function () {}); }
     toast("Évaluation tuteur enregistrée 👩‍🏫");
   };
@@ -1807,15 +1927,39 @@
     if (hist.length === 0) {
       html += '<p class="meta">Aucun scénario réalisé.</p>';
     } else {
-      html += '<table><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>Date</th><th>Scénario</th><th>Bloc</th><th>Score</th><th>Réflexivité</th></tr></thead><tbody>';
       hist.forEach(function (h) {
-        html += '<tr><td>' + h.date + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td></tr>';
+        html += '<tr><td>' + h.date + '</td><td>' + h.scenario + '</td><td>' + h.bloc + '</td><td>' + h.score + '/' + h.total + '</td><td>' + (h.reflex ? escapeHtml(h.reflex) : '—') + '</td></tr>';
       });
       html += '</tbody></table></div>';
     }
     html += '<script>window.print();</script></body></html>';
     w.document.write(html);
     w.document.close();
+    w.document.close();
+  };
+
+  window.exportCarnetPDF = function () {
+    var w = window.open("", "_blank");
+    var students = loadActiveStudentsData();
+    var login = STATE.bilanSelectedStudent;
+    var s = students[login] || {};
+    var name = s.name || (AUTH.currentUser ? (AUTH.currentUser.prenom + " " + AUTH.currentUser.nom) : "—");
+    var entrees = (s.history || []).filter(function (h) { return h.reflex && String(h.reflex).trim(); });
+    var css = 'body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a;} h1{color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:6px;} .meta{font-size:12px;color:#555;margin:4px 0;} .entree{border:1px solid #ccc;border-left:4px solid #2e7d32;border-radius:6px;padding:10px 12px;margin:10px 0;page-break-inside:avoid;} .entree .h{font-size:11px;color:#666;} .entree .t{font-size:13px;margin-top:6px;white-space:pre-wrap;}';
+    var html = '<!DOCTYPE html><html><head><title>Carnet de bord — ' + escapeHtml(name) + '</title><style>' + css + '</style></head><body>';
+    html += '<h1>Carnet de bord réflexif — SimASSP</h1>';
+    html += '<p class="meta">Élève : <strong>' + escapeHtml(name) + '</strong> · Identifiant : ' + escapeHtml(login || "—") + '</p>';
+    html += '<p class="meta">Export du ' + new Date().toLocaleDateString("fr-FR") + ' · ' + entrees.length + ' réflexion(s)</p>';
+    if (!entrees.length) {
+      html += '<p class="meta">Aucune réflexion enregistrée.</p>';
+    } else {
+      entrees.forEach(function (h) {
+        html += '<div class="entree"><div class="h">' + escapeHtml(h.date || '') + ' · ' + escapeHtml(h.scenario || '') + ' · ' + escapeHtml(h.bloc || '') + ' · ' + (h.score !== undefined ? h.score + '/' + h.total : '') + '</div><div class="t">' + escapeHtml(h.reflex) + '</div></div>';
+      });
+    }
+    html += '<script>window.print();</script></body></html>';
+    w.document.write(html);
     w.document.close();
   };
 

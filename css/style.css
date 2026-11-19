@@ -59,6 +59,7 @@ body.login-mode .teacher-badge { display: none !important; }
   display: flex; align-items: center; gap: 10px; margin-left: auto;
   font-size: .85rem; font-weight: 600; color: var(--c-primary);
 }
+.teacher-back { color: var(--c-primary) !important; border: 1px solid var(--c-border); }
 body.teacher-mode .nav { display: none !important; }
 body.enseignant-view .nav { display: none !important; }
 body.enseignant-view .user-badge { display: none !important; }
@@ -265,6 +266,11 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 .scenario-item--active { background: var(--c-primary); color: #fff; }
 .scenario-item__title { font-weight: 600; font-size: .9rem; }
 .scenario-item__meta { font-size: .72rem; opacity: .75; margin-top: 2px; }
+.scenario-filters { display: grid; gap: 6px; margin-bottom: 10px; }
+.scenario-filters .input { width: 100%; min-width: 0; padding: 8px 10px; font-size: .85rem; }
+.scenario-filters__row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.scenario-filters__count { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: .75rem; color: var(--c-muted); }
+.scenario-filters__count button { padding: 2px 6px; font-size: .72rem; }
 
 /* ---------- Scenario play ---------- */
 .scenario-play { background: var(--c-card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
@@ -386,6 +392,8 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
   .brand__tag { font-size: .6rem; padding: 1px 6px; }
   .user-badge { font-size: .75rem; gap: 6px; }
   .user-badge button { padding: 4px 8px; font-size: .75rem; }
+  .teacher-badge { font-size: .75rem; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .teacher-badge button { padding: 4px 8px; font-size: .75rem; }
 
   /* Navigation mobile (overlay) */
   .nav {
