@@ -1,21 +1,36 @@
-/* SimASSP — Service worker (app shell hors-ligne) */
+/* SimASSP — Service worker (app shell hors-ligne)
+   v2 — 20/11/2026 : correction de mise a jour.
+   - bump de cache : les anciens visiteurs (v1) purgent leur vieux cache
+     a l'activation du nouveau SW.
+   - scripts/CSS en NETWORK-FIRST : chaque mise a jour deployee est visible
+     au rechargement suivant ; le cache ne sert qu'en hors-ligne.
+   - icônes/manifest en cache-first (fichiers immuables).
+   - les URLs du shell portent le meme ?v= que index.html (cache.match
+     fonctionne par URL exacte). */
 "use strict";
 
-var CACHE = "simassp-shell-v1";
+var CACHE = "simassp-shell-v2";
+var VERSION = "20261120";
 var SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./css/style.css",
-  "./js/crypto.js",
-  "./js/supabase.js",
-  "./js/storage.js",
-  "./js/data.js",
-  "./js/scenarios_extra.js",
-  "./js/app.js",
+  "./css/style.css?v=" + VERSION,
+  "./js/crypto.js?v=" + VERSION,
+  "./js/supabase.js?v=" + VERSION,
+  "./js/storage.js?v=" + VERSION,
+  "./js/data.js?v=" + VERSION,
+  "./js/scenarios_extra.js?v=" + VERSION,
+  "./js/app.js?v=" + VERSION,
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png"
+];
+
+// Fichiers dont on veut TOUJOURS la version reseau quand elle est joignable.
+var NETWORK_FIRST = [
+  "./js/",
+  "./css/"
 ];
 
 self.addEventListener("install", function (event) {
@@ -41,6 +56,13 @@ self.addEventListener("activate", function (event) {
   );
 });
 
+function isNetworkFirst(path) {
+  for (var i = 0; i < NETWORK_FIRST.length; i++) {
+    if (path.indexOf(NETWORK_FIRST[i]) !== -1) return true;
+  }
+  return false;
+}
+
 self.addEventListener("fetch", function (event) {
   var req = event.request;
   if (req.method !== "GET") return;
@@ -63,15 +85,34 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
-  // Assets : cache d'abord, revalidation en arrière-plan.
+  // Scripts / CSS : réseau d'abord (mise à jour toujours visible), cache en secours.
+  if (isNetworkFirst(url.pathname)) {
+    event.respondWith((async function () {
+      var cache = await caches.open(CACHE);
+      try {
+        var fresh = await fetch(req);
+        if (fresh && fresh.ok) cache.put(req, fresh.clone());
+        return fresh;
+      } catch (e) {
+        var cached = await cache.match(req);
+        if (cached) return cached;
+        return Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Icônes / manifest : cache d'abord.
   event.respondWith((async function () {
     var cache = await caches.open(CACHE);
     var cached = await cache.match(req);
-    var network = fetch(req).then(function (resp) {
+    if (cached) return cached;
+    try {
+      var resp = await fetch(req);
       if (resp && resp.ok) cache.put(req, resp.clone());
       return resp;
-    }).catch(function () { return null; });
-    if (cached) return cached;
-    return (await network) || Response.error();
+    } catch (e) {
+      return Response.error();
+    }
   })());
 });

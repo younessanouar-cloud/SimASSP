@@ -388,10 +388,13 @@
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/scenarios_extra.js"></script>
+  <!-- ?v= cache-busting : indispensable apres une MAJ — le Service Worker des
+       anciens visiteurs sert les scripts cache-first ; une URL nouvelle force
+       le reseau et livre le nouveau code des le rechargement suivant. -->
+  <script src="js/supabase.js?v=20261120"></script>
+  <script src="js/storage.js?v=20261120"></script>
+  <script src="js/data.js?v=20261120"></script>
+  <script src="js/scenarios_extra.js?v=20261120"></script>
   <script>
     // Fusion des scénarios supplémentaires
     (function () {
@@ -400,8 +403,8 @@
       }
     })();
   </script>
-  <script src="js/crypto.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/crypto.js?v=20261120"></script>
+  <script src="js/app.js?v=20261120"></script>
   <script>
     // PWA : installation hors-ligne (HTTPS / localhost uniquement).
     if ("serviceWorker" in navigator &&
