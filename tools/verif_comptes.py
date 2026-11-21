@@ -72,6 +72,7 @@ with sync_playwright() as p:
     verifier("Application développée par" in pied.inner_text() and "DWYN Solutions" in pied.inner_text(),
              "Texte du pied de page incorrect")
     verifier(pied.locator("img").get_attribute("src") == "icons/dwyn.png", "Logo DWYN absent du pied")
+    verifier("Créé par Mr ANOUAR" not in page.content(), "Ancien pied 'Créé par Mr ANOUAR' toujours présent")
     page.evaluate("showView('enseignant')")
     verifier(pied.is_visible(), "Pied de page invisible dans la vue enseignant")
     page.evaluate("showView('login')")

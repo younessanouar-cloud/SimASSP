@@ -1,5 +1,5 @@
 /* SimASSP — Service worker (app shell hors-ligne)
-   v5 — 21/11/2026 : pied de page DWYN + Guide rapide Word.
+   v6 — 21/11/2026 : retrait de l'ancien pied "Créé par Mr ANOUAR".
    - bump de cache : les anciens visiteurs (v2) purgent leur vieux cache
      a l'activation du nouveau SW.
    - scripts/CSS en NETWORK-FIRST : chaque mise a jour deployee est visible
@@ -9,8 +9,8 @@
      fonctionne par URL exacte). */
 "use strict";
 
-var CACHE = "simassp-shell-v5";
-var VERSION = "20261121c";
+var CACHE = "simassp-shell-v6";
+var VERSION = "20261121d";
 var SHELL = [
   "./",
   "./index.html",
