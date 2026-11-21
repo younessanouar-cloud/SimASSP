@@ -66,6 +66,16 @@ with sync_playwright() as p:
     page.wait_for_function(
         "document.getElementById('view-login').classList.contains('view--active')", timeout=60000)
 
+    # --- 0. Pied de page DWYN present sur toutes les vues ---
+    pied = page.locator("footer.pied-app")
+    verifier(pied.count() == 1, "Pied de page DWYN absent")
+    verifier("Application développée par" in pied.inner_text() and "DWYN Solutions" in pied.inner_text(),
+             "Texte du pied de page incorrect")
+    verifier(pied.locator("img").get_attribute("src") == "icons/dwyn.png", "Logo DWYN absent du pied")
+    page.evaluate("showView('enseignant')")
+    verifier(pied.is_visible(), "Pied de page invisible dans la vue enseignant")
+    page.evaluate("showView('login')")
+
     # --- 1. Bouton afficher/masquer sur la page de connexion ---
     # Vue élève (active au depart)
     btn = page.locator(".pwd-field:has(> #loginPwd) .pwd-toggle-btn")

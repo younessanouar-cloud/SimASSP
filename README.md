@@ -12,6 +12,14 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 - 🗑️ **Gestion des comptes** : création, réinitialisation et **suppression multiple** des comptes élèves (cases à cocher + « Tout sélectionner » + bouton « Supprimer la sélection »). Chaque champ de mot de passe dispose d'un bouton **👁 / 🙈** pour afficher ou masquer la saisie.
 - 🖨️ **Fiche d'identifiants imprimable** : bouton « Imprimer les identifiants » avec filtre par classe, ouvrant une fiche A4 prête à imprimer ou à enregistrer en PDF (nom, identifiant, classe, mot de passe provisoire). Le mot de passe en clair est conservé dans le compte au moment de sa création/réinitialisation et supprimé dès que l'élève choisit le sien ; les anciens hashes base64 encore présents sont décodés automatiquement. Les comptes déjà convertis en PBKDF2 sans mot de passe conservé affichent « — » (utiliser « 🔄 Reset mdp »).
 
+## 📘 Guide rapide (Word)
+
+Un guide visuel **recto / verso** est fourni dans le dépôt : [`Guide_Rapide_SimASSP.docx`](Guide_Rapide_SimASSP.docx).
+- **Recto — Élèves** : connexion, parcours de compétences, scénarios, autoévaluation et progression, avec maquettes d'écran.
+- **Verso — Enseignants** : accès à l'espace prof, gestion des comptes (création, reset, suppression multiple), impression des identifiants par classe et suivi de la classe.
+
+Le pied de page de l'application et du guide mentionne **DWYN Solutions** avec son logo.
+
 ## 🚀 Accès en ligne
 
 👉 https://younessanouar-cloud.github.io/SimASSP/

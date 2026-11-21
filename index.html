@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261121b" />
+  <link rel="stylesheet" href="css/style.css?v=20261121c" />
 </head>
 <body>
   <!-- ============ LOADER ============ -->
@@ -328,6 +328,12 @@
     </section>
   </main>
 
+  <!-- ============ PIED DE PAGE DWYN (toutes les vues) ============ -->
+  <footer class="pied-app">
+    <img src="icons/dwyn.png" alt="DWYN Solutions" />
+    <span>Application développée par <b>DWYN Solutions</b></span>
+  </footer>
+
   <!-- ============ MODAL FEEDBACK ============ -->
   <div class="modal" id="modal" hidden>
     <div class="modal__backdrop"></div>
@@ -391,10 +397,10 @@
   <!-- ?v= cache-busting : indispensable apres une MAJ — le Service Worker des
        anciens visiteurs sert les scripts cache-first ; une URL nouvelle force
        le reseau et livre le nouveau code des le rechargement suivant. -->
-  <script src="js/supabase.js?v=20261121b"></script>
-  <script src="js/storage.js?v=20261121b"></script>
-  <script src="js/data.js?v=20261121b"></script>
-  <script src="js/scenarios_extra.js?v=20261121b"></script>
+  <script src="js/supabase.js?v=20261121c"></script>
+  <script src="js/storage.js?v=20261121c"></script>
+  <script src="js/data.js?v=20261121c"></script>
+  <script src="js/scenarios_extra.js?v=20261121c"></script>
   <script>
     // Fusion des scénarios supplémentaires
     (function () {
@@ -403,8 +409,8 @@
       }
     })();
   </script>
-  <script src="js/crypto.js?v=20261121b"></script>
-  <script src="js/app.js?v=20261121b"></script>
+  <script src="js/crypto.js?v=20261121c"></script>
+  <script src="js/app.js?v=20261121c"></script>
   <script>
     // PWA : installation hors-ligne (HTTPS / localhost uniquement).
     if ("serviceWorker" in navigator &&

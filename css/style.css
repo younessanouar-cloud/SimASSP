@@ -525,3 +525,13 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
   .toast { font-size: .8rem; padding: 8px 12px; }
 }
 
+/* ---------- Pied de page DWYN (toutes les pages, comme Progress+/ECBG) ---------- */
+.pied-app {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 24px; padding: 14px 10px 26px;
+  border-top: 1px solid var(--c-border);
+  color: var(--c-muted); font-size: .78rem;
+}
+.pied-app img { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; flex: none; }
+.pied-app b { color: var(--c-primary); }
+

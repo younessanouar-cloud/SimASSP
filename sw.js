@@ -1,5 +1,5 @@
 /* SimASSP — Service worker (app shell hors-ligne)
-   v4 — 21/11/2026 : fiche d'identifiants imprimable (PDF) par classe.
+   v5 — 21/11/2026 : pied de page DWYN + Guide rapide Word.
    - bump de cache : les anciens visiteurs (v2) purgent leur vieux cache
      a l'activation du nouveau SW.
    - scripts/CSS en NETWORK-FIRST : chaque mise a jour deployee est visible
@@ -9,8 +9,8 @@
      fonctionne par URL exacte). */
 "use strict";
 
-var CACHE = "simassp-shell-v4";
-var VERSION = "20261121b";
+var CACHE = "simassp-shell-v5";
+var VERSION = "20261121c";
 var SHELL = [
   "./",
   "./index.html",
@@ -22,6 +22,7 @@ var SHELL = [
   "./js/data.js?v=" + VERSION,
   "./js/scenarios_extra.js?v=" + VERSION,
   "./js/app.js?v=" + VERSION,
+  "./icons/dwyn.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png"
