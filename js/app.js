@@ -145,6 +145,7 @@
         login: finalLogin,
         passwordHash: await AUTH.hashPassword(pwd),
         hashAlgo: "pbkdf2-sha256",
+        plainPassword: pwd,
         prenom: prenom, nom: nom, niveau: niveau, classe: classe || "",
         created: new Date().toLocaleString("fr-FR"),
         mustChangePassword: true
@@ -166,6 +167,7 @@
       if (!acc) return null;
       acc.passwordHash = hash;
       acc.hashAlgo = "pbkdf2-sha256";
+      acc.plainPassword = pwd; // pour la fiche d'identifiants imprimable
       acc.mustChangePassword = true;
       // Ecriture CIBLEE : une seule ligne, sinon la tempete Realtime
       // re-ecrit l'ancien hash avant que la ligne du compte ne soit atteinte.
@@ -236,6 +238,25 @@
     for (var k = target.length - 1; k >= 0; k--) {
       if (!seen[target[k].id] && deletedIds.indexOf(target[k].id) === -1) target.splice(k, 1);
     }
+  }
+
+  // Mot de passe en clair conserve au moment de la creation / du reset pour
+  // pouvoir editer la fiche d'identifiants. Les anciens hashes base64 sont
+  // reversibles : on les decode a la volee. Les hashes PBKDF2 ne le sont pas.
+  function escHtml(s) {
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function getPlainPassword(acc) {
+    if (!acc) return null;
+    if (acc.plainPassword) return acc.plainPassword;
+    var h = acc.passwordHash || "";
+    if (h && h.indexOf("pbkdf2$") !== 0) {
+      try { return decodeURIComponent(escape(atob(h))).replace(/^simassp::/, ""); }
+      catch (e) { return null; }
+    }
+    return null;
   }
 
   // charger les comptes
@@ -368,6 +389,7 @@
         login: finalLogin,
         passwordHash: await TEACHER_AUTH.hashPassword(pwd),
         hashAlgo: "pbkdf2-sha256",
+        plainPassword: pwd,
         prenom: prenom, nom: nom, role: role || "enseignant",
         created: new Date().toLocaleString("fr-FR"),
         mustChangePassword: true
@@ -386,6 +408,7 @@
       if (!acc) return null;
       acc.passwordHash = hash;
       acc.hashAlgo = "pbkdf2-sha256";
+      acc.plainPassword = pwd;
       acc.mustChangePassword = true;
       await TEACHER_AUTH.saveAccount(acc);
       return pwd;
@@ -1498,6 +1521,15 @@
 
   function renderComptesTab(c) {
     var accounts = AUTH.accounts.slice().sort(function (a, b) { return a.nom.localeCompare(b.nom); });
+    var classes = [];
+    accounts.forEach(function (a) {
+      var cl = (a.classe || "Sans classe").trim() || "Sans classe";
+      if (classes.indexOf(cl) === -1) classes.push(cl);
+    });
+    classes.sort(function (a, b) { return a.localeCompare(b, "fr"); });
+    var classOptions = '<option value="">Toutes les classes</option>' + classes.map(function (cl) {
+      return '<option value="' + escHtml(cl) + '">' + escHtml(cl) + '</option>';
+    }).join("");
     c.innerHTML = '<h3 style="color:var(--c-primary);">👥 Gestion des comptes élèves</h3>' +
       '<p class="muted">Crée, réinitialise ou supprime les comptes élèves. Les identifiants/mots de passe sont générés ici.</p>' +
       '<div class="card" style="margin-bottom:16px;">' +
@@ -1512,7 +1544,10 @@
       '<div id="newAccountResult" style="margin-top:10px;"></div></div>' +
       '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn btn--sm btn--accent" onclick="exportAccounts()">📤 Exporter la liste</button>' +
-      '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="importAccounts()">📥 Importer une liste</button></div>' +
+      '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="importAccounts()">📥 Importer une liste</button>' +
+      (accounts.length ? '<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--c-muted);">Classe<select id="printClasse" class="input" style="min-width:160px;">' + classOptions + '</select></label>' +
+        '<button class="btn btn--sm btn--primary" onclick="printIdentifiants()">🖨️ Imprimer les identifiants</button>' : '') +
+      '</div>' +
       '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 8px;">' +
       '<h4 style="color:var(--c-primary);margin:0;">📋 Comptes existants (' + accounts.length + ')</h4>' +
       (accounts.length ? '<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--c-muted);cursor:pointer;"><input type="checkbox" id="selAllEleves" onchange="toggleAllEleves(this.checked)" /> Tout sélectionner</label>' +
@@ -1555,6 +1590,73 @@
     await AUTH.saveAccounts();
     toast(ids.length + " compte(s) supprimé(s). ✅");
     renderTeacherTab("comptes");
+  };
+
+  // ---------- FICHE D'IDENTIFIANTS IMPRIMABLE (PDF via le navigateur) ----------
+  window.printIdentifiants = function () {
+    var sel = document.getElementById("printClasse");
+    var classe = sel ? sel.value : "";
+    var list = AUTH.accounts.slice();
+    if (classe) {
+      list = list.filter(function (a) {
+        return ((a.classe || "Sans classe").trim() || "Sans classe") === classe;
+      });
+    }
+    if (!list.length) { toast("Aucun compte à imprimer pour cette classe."); return; }
+    list.sort(function (a, b) {
+      var c = (a.classe || "").localeCompare(b.classe || "", "fr");
+      return c !== 0 ? c : (a.nom || "").localeCompare(b.nom || "", "fr");
+    });
+    var manquants = 0;
+    var rows = list.map(function (a) {
+      var pwd = getPlainPassword(a);
+      if (!pwd) manquants++;
+      return '<tr><td>' + escHtml(a.prenom || "") + ' ' + escHtml(a.nom || "") + '</td>' +
+        '<td><code>' + escHtml(a.login) + '</code></td>' +
+        '<td>' + escHtml(a.classe || "—") + '</td>' +
+        '<td class="pwd">' + (pwd ? escHtml(pwd) : '<span class="na">—</span>') + '</td></tr>';
+    }).join("");
+    var titre = classe || "Toutes les classes";
+    var html = '<!doctype html><html lang="fr"><head><meta charset="utf-8">' +
+      '<title>Identifiants SimASSP — ' + escHtml(titre) + '</title><style>' +
+      '@page { size: A4 portrait; margin: 14mm; }' +
+      'body { font-family: Arial, Helvetica, sans-serif; color:#16213e; margin:0; font-size:11pt; }' +
+      'header { border-bottom:3px solid #1e3a5f; padding-bottom:12px; margin-bottom:18px; }' +
+      'h1 { font-size:20pt; color:#1e3a5f; margin:0 0 6px; }' +
+      'header p { margin:2px 0; color:#444; font-size:10pt; }' +
+      'table { width:100%; border-collapse:collapse; }' +
+      'th, td { border:1px solid #c9d2e0; padding:8px 10px; text-align:left; }' +
+      'th { background:#e8eaf6; color:#1e3a5f; font-size:10pt; }' +
+      'code { font-family: Consolas, "Courier New", monospace; font-weight:bold; font-size:11pt; }' +
+      'td.pwd { font-weight:bold; letter-spacing:.5px; }' +
+      '.na { color:#999; font-weight:normal; }' +
+      'tr:nth-child(even) td { background:#fafbfe; }' +
+      '.note { margin-top:16px; font-size:9pt; color:#555; border-top:1px solid #ccc; padding-top:8px; }' +
+      '.barre { display:flex; gap:10px; margin-bottom:16px; }' +
+      '.barre button { font:inherit; padding:8px 14px; cursor:pointer; border:1px solid #1e3a5f; ' +
+      'background:#1e3a5f; color:#fff; border-radius:6px; }' +
+      '.barre button:last-child { background:#fff; color:#1e3a5f; }' +
+      '@media print { .barre { display:none; } }' +
+      '</style></head><body>' +
+      '<div class="barre"><button onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>' +
+      '<button onclick="window.close()">Fermer</button></div>' +
+      '<header><h1>SimASSP — Identifiants élèves</h1>' +
+      '<p>Classe : <strong>' + escHtml(titre) + '</strong> · ' + list.length + ' élève(s)</p>' +
+      '<p>Édité le ' + escHtml(new Date().toLocaleDateString("fr-FR")) + '</p></header>' +
+      '<table><thead><tr><th>Élève</th><th>Identifiant</th><th>Classe</th><th>Mot de passe</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      '<p class="note">Documents confidentiels — à distribuer aux élèves concernés. ' +
+      'Les mots de passe sont provisoires : chaque élève doit en choisir un nouveau à sa première connexion.' +
+      (manquants ? '<br>⚠ ' + manquants + ' mot(s) de passe non disponible(s) (hash PBKDF2 irréversible) : ' +
+        'utilisez « 🔄 Reset mdp » pour en générer un nouveau avant d\'imprimer.' : '') +
+      '</p><script>setTimeout(function(){ try { window.print(); } catch(e){} }, 600);<\/script>' +
+      '</body></html>';
+    var w = window.open("", "_blank");
+    if (!w) { toast("Autorise les fenêtres pop-up pour imprimer la fiche."); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    try { w.focus(); } catch (e) {}
   };
 
   window.createAccount = async function () {
@@ -1621,6 +1723,7 @@
               login: d.login,
               passwordHash: await AUTH.hashPassword(pwd),
               hashAlgo: "pbkdf2-sha256",
+              plainPassword: pwd,
               prenom: d.prenom || "", nom: d.nom || "",
               niveau: d.niveau || "2", classe: d.classe || "",
               created: d.created || new Date().toLocaleString("fr-FR"),
@@ -2231,6 +2334,7 @@
       var acc = TEACHER_AUTH.currentUser;
       acc.passwordHash = await TEACHER_AUTH.hashPassword(p1);
       acc.hashAlgo = "pbkdf2-sha256";
+      delete acc.plainPassword; // le mot de passe choisi n'est plus a distribuer
       acc.mustChangePassword = false;
       await TEACHER_AUTH.saveAccounts();
       STATE.forcePasswordChange = false;
@@ -2242,6 +2346,7 @@
       var acc2 = AUTH.currentUser;
       acc2.passwordHash = await AUTH.hashPassword(p1);
       acc2.hashAlgo = "pbkdf2-sha256";
+      delete acc2.plainPassword; // le mot de passe choisi n'est plus a distribuer
       acc2.mustChangePassword = false;
       await AUTH.saveAccount(acc2);
       STATE.forcePasswordChange = false;

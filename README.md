@@ -10,6 +10,7 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 - 📊 **Tableau de progression** : KPI, progression par bloc et par compétence, historique (avec colonne « Réflexivité »), export JSON.
 - 👩‍🏫 **Espace enseignant/tuteur** : suivi, liste des scénarios, bilan de progression et carnet de bord réflexif par élève (mot de passe par défaut `ecbg2026`). Un bouton de retour permanent et un logo contextuel évitent d'être bloqué sur l'accueil après un clic sur le bandeau « Bac Pro ASSP ».
 - 🗑️ **Gestion des comptes** : création, réinitialisation et **suppression multiple** des comptes élèves (cases à cocher + « Tout sélectionner » + bouton « Supprimer la sélection »). Chaque champ de mot de passe dispose d'un bouton **👁 / 🙈** pour afficher ou masquer la saisie.
+- 🖨️ **Fiche d'identifiants imprimable** : bouton « Imprimer les identifiants » avec filtre par classe, ouvrant une fiche A4 prête à imprimer ou à enregistrer en PDF (nom, identifiant, classe, mot de passe provisoire). Le mot de passe en clair est conservé dans le compte au moment de sa création/réinitialisation et supprimé dès que l'élève choisit le sien ; les anciens hashes base64 encore présents sont décodés automatiquement. Les comptes déjà convertis en PBKDF2 sans mot de passe conservé affichent « — » (utiliser « 🔄 Reset mdp »).
 
 ## 🚀 Accès en ligne
 
@@ -30,6 +31,8 @@ Une fenêtre de protection de 5 secondes après chaque écriture locale empêche
 ## 🔐 Sécurité des comptes
 
 Les mots de passe sont hachés avec **PBKDF2-SHA-256** (150 000 itérations, sel aléatoire de 16 octets, empreinte 256 bits) via l'API Web Crypto (`js/crypto.js`). L'ancien format `btoa` réversible est encore accepté **une seule fois** lors d'une connexion réussie, puis automatiquement remplacé par un hash PBKDF2.
+
+Pour permettre l'impression de la fiche d'identifiants, le mot de passe provisoire est également conservé en clair dans le champ `plainPassword` du compte (visible uniquement par l'enseignant via RLS, jamais exposé par la RPC publique de connexion) et supprimé dès que l'élève change son mot de passe. Les comptes de démonstration étant fictifs, ce compromis est acceptable ; ne pas l'employer pour de vrais comptes.
 
 **Isolation des données (Option B — retenue le 19/11/2026).** Le client ouvre une session **Supabase Auth anonyme** persistée sur l'appareil. À chaque connexion, il revendique son compte auprès du serveur avec une **preuve PBKDF2** : le mot de passe en clair ne quitte jamais le navigateur. Les policies RLS limitent alors chaque élève à ses propres lignes ; l'enseignant conserve un accès complet. Les blobs partagés (`students_data`, `pfmp`, `tuteur_evals`) ne sont accessibles à l'élève que par des RPC ciblées sur sa propre clé.
 

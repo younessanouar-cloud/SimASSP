@@ -105,6 +105,56 @@ with sync_playwright() as p:
     btn_del = page.locator("#btnDeleteSelected")
     verifier(btn_del.is_disabled(), "Bouton supprimer devrait être désactivé au départ")
 
+    # --- 4. Fiche d'identifiants imprimable ---
+    verifier(page.locator("#printClasse").count() == 1, "Liste déroulante des classes absente")
+    verifier(page.locator("button:has-text('Imprimer les identifiants')").count() == 1,
+             "Bouton « Imprimer les identifiants » absent")
+    options = page.locator("#printClasse option").all_inner_texts()
+    verifier("Toutes les classes" in options and "2de TEST" in options,
+             "Options de classe incorrectes: %s" % options)
+
+    # Toutes les classes : les 3 comptes et le mot de passe (hash legacy décodé)
+    with ctx.expect_page() as popup_info:
+        page.evaluate("window.printIdentifiants()")
+    popup = popup_info.value
+    popup.wait_for_load_state("domcontentloaded")
+    contenu = popup.content()
+    for attendu in ("compte.un", "compte.deux", "compte.trois", PWD, "Identifiants élèves"):
+        verifier(attendu in contenu, "Fiche PDF: « %s » absent" % attendu)
+    verifier("Enregistrer en PDF" in contenu, "Bouton d'impression PDF absent de la fiche")
+    popup.close()
+
+    # Filtre par classe : créer un 4e compte dans une autre classe via l'UI
+    page.fill("#newPrenom", "Quatre")
+    page.fill("#newNom", "Eleve")
+    page.select_option("#newNiveau", "2")
+    page.fill("#newClasse", "3e AUTRE")
+    page.evaluate("window.createAccount()")
+    page.wait_for_timeout(800)
+    page.evaluate("renderTeacherTab('comptes')")
+    id_quatre = page.evaluate("""() => {
+        var l = JSON.parse(localStorage.getItem('simassp_accounts')||'[]')
+                  .filter(x => x.classe === '3e AUTRE');
+        return l.length ? l[0].id : null;
+    }""")
+    verifier(id_quatre is not None, "Création du compte 3e AUTRE KO")
+    page.select_option("#printClasse", "3e AUTRE")
+    with ctx.expect_page() as popup_info2:
+        page.evaluate("window.printIdentifiants()")
+    popup2 = popup_info2.value
+    popup2.wait_for_load_state("domcontentloaded")
+    contenu2 = popup2.content()
+    nb_lignes = contenu2.count("<tr>") - 1  # -1 = ligne d'en-tête
+    verifier(nb_lignes == 1 and "compte.un" not in contenu2,
+             "Filtre par classe KO (%d lignes)" % nb_lignes)
+    verifier("3e AUTRE" in contenu2, "Nom de classe absent de la fiche")
+    popup2.close()
+    # Retirer le compte supplémentaire avant le test de suppression
+    if id_quatre:
+        page.evaluate("window.deleteAccount('%s')" % id_quatre)
+    page.wait_for_timeout(500)
+    page.evaluate("renderTeacherTab('comptes')")
+
     # Tout sélectionner
     page.locator("#selAllEleves").check()
     verifier(page.locator(".sel-eleve:checked").count() == 3, "Sélection totale KO")
