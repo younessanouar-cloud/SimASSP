@@ -652,7 +652,7 @@
   };
 
   // ---------- NAVIGATION ----------
-  var views = ["login", "accueil", "parcours", "scenarios", "autoeval", "dashboard", "pfmp", "matheo", "enseignant"];
+  var views = ["login", "accueil", "parcours", "scenarios", "autoeval", "dashboard", "pfmp", "soins", "enseignant"];
   function showView(name) {
     if (views.indexOf(name) === -1) name = "accueil";
     if (name !== "login" && name !== "enseignant" && !AUTH.currentUser && !TEACHER_AUTH.currentUser) { name = "login"; }
@@ -1028,7 +1028,7 @@
         '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="replayScenario()">🔁 Rejouer</button>' +
         (s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="showVariants()">🔀 Variantes</button>' : '') +
 (s.variantes && s.variantes.length ? '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openRandomVariant()">🎲 Variante aléatoire</button>' : '') +
-        '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="askMatheo()">🤖 Demander à Mathéo</button>' +
+        '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="askScenarioSoins()">🤖 Demander à l’Assistant Soins</button>' +
         '</div></div>';
       return;
     }
@@ -1139,15 +1139,21 @@
     showView("dashboard");
   };
 
-  window.askMatheo = function () {
+  // Ouvre le chat avec les notions clés du bloc du scénario travaillé.
+  window.askScenarioSoins = function () {
     var s = STATE.scenario;
-    var url = "https://you45-assistant-mr-anouar.hf.space";
-    var prompt = encodeURIComponent('Je viens de réaliser le scénario "' + s.titre + '" (bloc ' + s.bloc + ') et j\'ai obtenu ' + STATE.score + '/' + s.steps.length + '. Peux-tu m\'expliquer ce que j\'aurais pu mieux faire et me donner des conseils pour progresser ?');
-    openModal('<h3 style="color:var(--c-primary);">🤖 Demander à Mathéo IA</h3>' +
-      '<p class="muted">Ouvre l\'assistant pédagogique dans un nouvel onglet avec un prompt pré-rempli.</p>' +
-      '<div style="margin:12px 0;padding:12px;background:#f1f5f9;border-radius:8px;font-size:.85rem;"><strong>Prompt :</strong> Je viens de réaliser le scénario "' + s.titre + '" (bloc ' + s.bloc + ') et j\'ai obtenu ' + STATE.score + '/' + s.steps.length + '. Peux-tu m\'expliquer ce que j\'aurais pu mieux faire ?</div>' +
-      '<a href="' + url + '?prompt=' + prompt + '" target="_blank" class="btn btn--primary">Ouvrir Mathéo IA ↗</a>' +
-      '<button class="btn btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);margin-left:8px;" onclick="closeModal()">Fermer</button>');
+    if (!s) return;
+    showView("soins");
+    var bloc = window.SOINS_BOT && window.SOINS_BOT.blocAnswer
+      ? window.SOINS_BOT.blocAnswer(s.bloc)
+      : '<p class="soins-def">Reprends le lexique du bloc ' + escHtml(s.bloc) + ' pour réviser.</p>';
+    var html = '<div class="soins-msg soins-msg--user"><div class="soins-bubble">Je viens de faire le scénario « ' +
+      escHtml(s.titre) + ' » (bloc ' + escHtml(s.bloc) + '). Quelles notions dois-je réviser ?</div></div>' +
+      '<div class="soins-msg soins-msg--bot"><div class="soins-avatar">🤖</div><div class="soins-bubble">' +
+      '<p class="soins-def">Bravo pour ce scénario ! Voici les notions clés du bloc ' + escHtml(s.bloc) + ' à revoir 👇</p>' +
+      bloc + '</div></div>';
+    var box = document.getElementById("soinsMessages");
+    if (box) { box.insertAdjacentHTML("beforeend", html); box.scrollTop = box.scrollHeight; }
   };
 
   // ---------- VOIX ----------
@@ -2254,12 +2260,69 @@
     w.document.close();
   };
 
-  // ---------- MATHEO ----------
-  window.openMatheoPrompt = function (prompt) {
-    var url = "https://you45-assistant-mr-anouar.hf.space";
-    var p = encodeURIComponent(prompt);
-    window.open(url + "?prompt=" + p, "_blank");
+  // ---------- ASSISTANT SOINS (chat local) ----------
+  function soinsScroll() {
+    var box = document.getElementById("soinsMessages");
+    if (box) box.scrollTop = box.scrollHeight;
+  }
+  window.askSoinsBot = function (question) {
+    var q = String(question || "").trim();
+    if (!q) return;
+    showView("soins");
+    var box = document.getElementById("soinsMessages");
+    if (!box) return;
+    var user = document.createElement("div");
+    user.className = "soins-msg soins-msg--user";
+    var bub = document.createElement("div");
+    bub.className = "soins-bubble";
+    bub.textContent = q;
+    user.appendChild(bub);
+    box.appendChild(user);
+    var typing = document.createElement("div");
+    typing.className = "soins-msg soins-msg--bot soins-typing";
+    typing.innerHTML = '<div class="soins-avatar">🤖</div><div class="soins-bubble">Je réfléchis…</div>';
+    box.appendChild(typing);
+    soinsScroll();
+    setTimeout(function () {
+      typing.remove();
+      var bot = document.createElement("div");
+      bot.className = "soins-msg soins-msg--bot";
+      bot.innerHTML = '<div class="soins-avatar">🤖</div><div class="soins-bubble"></div>';
+      var b = bot.querySelector(".soins-bubble");
+      try {
+        b.innerHTML = window.SOINS_BOT && window.SOINS_BOT.answer
+          ? window.SOINS_BOT.answer(q).html
+          : "<p class='soins-def'>Le lexique n'est pas chargé. Recharge la page.</p>";
+      } catch (e) {
+        b.textContent = "Désolé, une erreur est survenue. Reformule ta question.";
+      }
+      box.appendChild(bot);
+      soinsScroll();
+    }, 260);
+    var input = document.getElementById("soinsInput");
+    if (input) { input.value = ""; input.focus(); }
   };
+  window.sendSoins = function () {
+    var input = document.getElementById("soinsInput");
+    if (input) askSoinsBot(input.value);
+  };
+  window.clearSoins = function () {
+    var box = document.getElementById("soinsMessages");
+    if (!box) return;
+    box.innerHTML = '<div class="soins-msg soins-msg--bot"><div class="soins-avatar">🤖</div>' +
+      '<div class="soins-bubble"><p class="soins-def">Conversation effacée 👋 Pose-moi une nouvelle question sur le vocabulaire des soins !</p></div></div>';
+  };
+  window.toggleSoinsLexique = function () {
+    var panel = document.getElementById("soinsLexique");
+    if (!panel) return;
+    if (!panel.hidden) { panel.hidden = true; return; }
+    if (!panel.innerHTML && window.SOINS_BOT) panel.innerHTML = window.SOINS_BOT.lexiqueHTML();
+    panel.hidden = false;
+  };
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && STATE.view === "soins" && document.activeElement &&
+        document.activeElement.id === "soinsInput") { e.preventDefault(); sendSoins(); }
+  });
 
   // ---------- TOAST ----------
   var toastTimer;
@@ -2365,6 +2428,11 @@
     try { window.showView = showView; } catch (e) { console.error("showView", e); }
     // Boutons 👁 / 🙈 sur tous les champs de mot de passe
     try { addPasswordToggles(document); } catch (e) { console.warn("addPasswordToggles:", e); }
+    // Nombre de notions du lexique soins
+    try {
+      var sc = document.getElementById("soinsCount");
+      if (sc && window.SOINS_BOT) sc.textContent = String(window.SOINS_BOT.count);
+    } catch (e) {}
     // Attendre Supabase
     if (window.SB_READY) { try { await window.SB_READY; } catch (e) {} }
     // Charger les comptes depuis Supabase (ou cache local)

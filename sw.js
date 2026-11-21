@@ -1,5 +1,5 @@
 /* SimASSP — Service worker (app shell hors-ligne)
-   v6 — 21/11/2026 : retrait de l'ancien pied "Créé par Mr ANOUAR".
+   v7 — 21/11/2026 : Assistant Soins (chat local) à la place de Mathéo IA.
    - bump de cache : les anciens visiteurs (v2) purgent leur vieux cache
      a l'activation du nouveau SW.
    - scripts/CSS en NETWORK-FIRST : chaque mise a jour deployee est visible
@@ -9,14 +9,16 @@
      fonctionne par URL exacte). */
 "use strict";
 
-var CACHE = "simassp-shell-v6";
-var VERSION = "20261121d";
+var CACHE = "simassp-shell-v7";
+var VERSION = "20261121e";
 var SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./css/style.css?v=" + VERSION,
   "./js/crypto.js?v=" + VERSION,
+  "./js/soins_lexique.js?v=" + VERSION,
+  "./js/soins_bot.js?v=" + VERSION,
   "./js/supabase.js?v=" + VERSION,
   "./js/storage.js?v=" + VERSION,
   "./js/data.js?v=" + VERSION,

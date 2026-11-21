@@ -11,6 +11,7 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 - 👩‍🏫 **Espace enseignant/tuteur** : suivi, liste des scénarios, bilan de progression et carnet de bord réflexif par élève (mot de passe par défaut `ecbg2026`). Un bouton de retour permanent et un logo contextuel évitent d'être bloqué sur l'accueil après un clic sur le bandeau « Bac Pro ASSP ».
 - 🗑️ **Gestion des comptes** : création, réinitialisation et **suppression multiple** des comptes élèves (cases à cocher + « Tout sélectionner » + bouton « Supprimer la sélection »). Chaque champ de mot de passe dispose d'un bouton **👁 / 🙈** pour afficher ou masquer la saisie.
 - 🖨️ **Fiche d'identifiants imprimable** : bouton « Imprimer les identifiants » avec filtre par classe, ouvrant une fiche A4 prête à imprimer ou à enregistrer en PDF (nom, identifiant, classe, mot de passe provisoire). Le mot de passe en clair est conservé dans le compte au moment de sa création/réinitialisation et supprimé dès que l'élève choisit le sien ; les anciens hashes base64 encore présents sont décodés automatiquement. Les comptes déjà convertis en PBKDF2 sans mot de passe conservé affichent « — » (utiliser « 🔄 Reset mdp »).
+- 🤖 **Assistant Soins** (remplace l'ancien Mathéo IA) : chatbot pédagogique intégré, 100 % local et hors-ligne, avec **145 notions techniques du Bac Pro ASSP** (`js/soins_lexique.js`). Il répond aux définitions, conduites à tenir, sigles et comparaisons, avec tolérance aux fautes et aux accents, un lexique complet consultable et une révision ciblée après chaque scénario. Aucune clé API, aucune donnée envoyée sur Internet.
 
 ## 📘 Guide rapide (Word)
 
@@ -74,7 +75,9 @@ SimASSP/
 │   ├── scenarios_extra.js  # scénarios additionnels (total 102)
 │   ├── storage.js          # cache local + passerelle Supabase + garde anti-effacement
 │   ├── supabase.js         # session anonyme, helpers RLS (lookup/claim/snapshot) + realtime
-│   └── app.js              # logique applicative (navigation, filtres, carnet, bilans)
+│   ├── soins_lexique.js    # 145 notions techniques ASSP (base de l'Assistant Soins)
+│   ├── soins_bot.js        # moteur de réponses : définitions, gestes, sigles, comparaisons
+│   └── app.js              # logique applicative (navigation, filtres, carnet, bilans, chat)
 ├── docs/
 │   ├── RLS_SUPABASE.md     # audit RLS, option B retenue, risques résiduels
 │   └── RLS_MIGRATION.sql   # script à exécuter dans le dashboard Supabase
@@ -84,6 +87,7 @@ SimASSP/
 │   ├── verif_ameliorations.py    # filtres, carnet, navigation, PBKDF2, PWA hors-ligne
 │   ├── verif_auth_pbkdf2.py      # migration, création, reset, changement de mot de passe
 │   ├── verif_comptes.py          # suppression multiple + bouton 👁 afficher/masquer
+│   ├── verif_soins_bot.py        # Assistant Soins : définitions, fautes, comparaisons, lexique
 │   ├── verif_rls_option_b.py     # RPC simulées : claim, migration, isolation, repli
 │   └── verif_navigateur_plage.py # validation navigateur de tous les scénarios
 └── README.md

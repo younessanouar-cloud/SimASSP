@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261121d" />
+  <link rel="stylesheet" href="css/style.css?v=20261121e" />
 </head>
 <body>
   <!-- ============ LOADER ============ -->
@@ -58,7 +58,7 @@
         <button class="nav__btn" data-nav="autoeval">🪞 Autoéval</button>
         <button class="nav__btn" data-nav="dashboard">📊 Tableau</button>
         <button class="nav__btn" data-nav="pfmp">📋 PFMP</button>
-        <button class="nav__btn" data-nav="matheo">🤖 Mathéo IA</button>
+        <button class="nav__btn" data-nav="soins">🤖 Assistant Soins</button>
         <button class="nav__btn nav__btn--accent" data-nav="enseignant">👩‍🏫 Enseignant</button>
       </nav>
       </div>
@@ -264,27 +264,39 @@
       <div class="pfmp" id="pfmpContainer"></div>
     </section>
 
-    <!-- ---------- MATHEO IA ---------- -->
-    <section id="view-matheo" class="view">
+    <!-- ---------- ASSISTANT SOINS ---------- -->
+    <section id="view-soins" class="view">
       <div class="pagehead">
-        <h1>🤖 Mathéo IA — Ton compagnon pédagogique</h1>
-        <p>Pose tes questions, demande des explications, travaille tes compétences. Mathéo t'accompagne.</p>
+        <h1>🤖 Assistant Soins — ton lexique et tes réponses</h1>
+        <p>Pose une question en français : définition, geste à faire, sigle, différence entre deux notions. Réponses pédagogiques, immédiates et hors-ligne.</p>
       </div>
-      <div class="matheo">
-        <div class="matheo__quick">
-          <h3 style="color:var(--c-primary);margin:0 0 10px;">🚀 Questions rapides</h3>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Explique-moi la bientraitance en Bac Pro ASSP.')">Bientraitance</button>
-            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Comment faire une bonne transmission orale ?')">Transmission</button>
-            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Quels sont les signes d\\'hypoglycémie et que faire ?')">Hypoglycémie</button>
-            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Comment animer une activité pour des résidents âgés ?')">Animation</button>
-            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="openMatheoPrompt('Explique le projet individualisé en Bac Pro ASSP.')">Projet individualisé</button>
+      <div class="soins-chat">
+        <div class="soins-chat__quick" id="soinsQuick">
+          <span class="soins-quick-label">🚀 Questions rapides</span>
+          <button class="soins-chip" onclick="askSoinsBot('Explique-moi la bientraitance')">Bientraitance</button>
+          <button class="soins-chip" onclick="askSoinsBot('Comment faire une bonne transmission orale ?')">Transmission</button>
+          <button class="soins-chip" onclick="askSoinsBot('Que faire en cas d’hypoglycémie ?')">Hypoglycémie</button>
+          <button class="soins-chip" onclick="askSoinsBot('Explique-moi l’escarre et comment la prévenir')">Escarre</button>
+          <button class="soins-chip" onclick="askSoinsBot('Différence entre asepsie et antisepsie')">Asepsie / Antisepsie</button>
+          <button class="soins-chip" onclick="askSoinsBot('Que signifie EHPAD ?')">Sigles</button>
+        </div>
+        <div class="soins-chat__messages" id="soinsMessages" aria-live="polite">
+          <div class="soins-msg soins-msg--bot">
+            <div class="soins-avatar">🤖</div>
+            <div class="soins-bubble">
+              <p class="soins-def">Bonjour 👋 Je suis l’<b>Assistant Soins</b>. Je connais <b id="soinsCount">145</b> notions techniques du Bac Pro ASSP : définitions, gestes, sigles et conduites à tenir.</p>
+              <p class="soins-note">Exemple : « c’est quoi la bientraitance ? », « que faire si une personne chute ? » ou « différence entre asepsie et antisepsie ».</p>
+            </div>
           </div>
         </div>
-        <div class="matheo__frame">
-          <iframe src="https://you45-assistant-mr-anouar.hf.space" title="Mathéo IA" loading="lazy"></iframe>
+        <div class="soins-chat__composer">
+          <input type="text" id="soinsInput" class="input" placeholder="Écris ta question… (ex. : c'est quoi un DASRI ?)" autocomplete="off" />
+          <button class="btn btn--primary btn--sm" onclick="sendSoins()">Envoyer ➤</button>
+          <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="toggleSoinsLexique()">📚 Lexique</button>
+          <button class="btn btn--sm btn--ghost" style="color:var(--c-muted);border:1px solid var(--c-border);" onclick="clearSoins()" title="Effacer la conversation">🗑️</button>
         </div>
-        <p class="muted" style="margin-top:10px;font-size:.8rem;">Si l'iframe ne se charge pas, <a href="https://you45-assistant-mr-anouar.hf.space" target="_blank">ouvre Mathéo IA dans un nouvel onglet ↗</a>.</p>
+        <div class="soins-lexique-panel" id="soinsLexique" hidden></div>
+        <p class="muted" style="margin-top:10px;font-size:.78rem;">Contenu pédagogique fictif : les réponses ne remplacent ni un professionnel de santé ni les protocoles de ton établissement.</p>
       </div>
     </section>
 
@@ -347,7 +359,7 @@
   <div class="toast" id="toast" hidden></div>
 
   <!-- ---------- FLOATING MATHEO BUTTON ---------- -->
-  <button class="fab-matheo" onclick="showView('matheo')" title="Mathéo IA">🤖</button>
+  <button class="fab-soins" onclick="showView('soins')" title="Assistant Soins — lexique et définitions">🤖</button>
 
   <script>
     // Fallback robuste : cacher le loader si le JS ne s'exécute pas + afficher les erreurs
@@ -393,10 +405,10 @@
   <!-- ?v= cache-busting : indispensable apres une MAJ — le Service Worker des
        anciens visiteurs sert les scripts cache-first ; une URL nouvelle force
        le reseau et livre le nouveau code des le rechargement suivant. -->
-  <script src="js/supabase.js?v=20261121d"></script>
-  <script src="js/storage.js?v=20261121d"></script>
-  <script src="js/data.js?v=20261121d"></script>
-  <script src="js/scenarios_extra.js?v=20261121d"></script>
+  <script src="js/supabase.js?v=20261121e"></script>
+  <script src="js/storage.js?v=20261121e"></script>
+  <script src="js/data.js?v=20261121e"></script>
+  <script src="js/scenarios_extra.js?v=20261121e"></script>
   <script>
     // Fusion des scénarios supplémentaires
     (function () {
@@ -405,8 +417,10 @@
       }
     })();
   </script>
-  <script src="js/crypto.js?v=20261121d"></script>
-  <script src="js/app.js?v=20261121d"></script>
+  <script src="js/crypto.js?v=20261121e"></script>
+  <script src="js/soins_lexique.js?v=20261121e"></script>
+  <script src="js/soins_bot.js?v=20261121e"></script>
+  <script src="js/app.js?v=20261121e"></script>
   <script>
     // PWA : installation hors-ligne (HTTPS / localhost uniquement).
     if ("serviceWorker" in navigator &&
