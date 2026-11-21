@@ -13,13 +13,11 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 - 🖨️ **Fiche d'identifiants imprimable** : bouton « Imprimer les identifiants » avec filtre par classe, ouvrant une fiche A4 prête à imprimer ou à enregistrer en PDF (nom, identifiant, classe, mot de passe provisoire). Le mot de passe en clair est conservé dans le compte au moment de sa création/réinitialisation et supprimé dès que l'élève choisit le sien ; les anciens hashes base64 encore présents sont décodés automatiquement. Les comptes déjà convertis en PBKDF2 sans mot de passe conservé affichent « — » (utiliser « 🔄 Reset mdp »).
 - 🤖 **Assistant Soins** (remplace l'ancien Mathéo IA) : chatbot pédagogique intégré, 100 % local et hors-ligne, avec **145 notions techniques du Bac Pro ASSP** (`js/soins_lexique.js`). Il répond aux définitions, conduites à tenir, sigles et comparaisons, avec tolérance aux fautes et aux accents, un lexique complet consultable et une révision ciblée après chaque scénario. Aucune clé API, aucune donnée envoyée sur Internet.
 
-## 📘 Guide rapide (Word)
+## 📘 Guide manga (Word)
 
-Un guide visuel **recto / verso** est fourni dans le dépôt : [`Guide_Rapide_SimASSP.docx`](Guide_Rapide_SimASSP.docx).
-- **Recto — Élèves** : connexion, parcours de compétences, scénarios, autoévaluation et progression, avec maquettes d'écran.
-- **Verso — Enseignants** : accès à l'espace prof, gestion des comptes (création, reset, suppression multiple), impression des identifiants par classe et suivi de la classe.
+Guide d'utilisation **exclusivement destiné aux élèves**, au format **manga noir et blanc sur une page A4 recto-verso** : [`Guide_Manga_SimASSP_Eleve.docx`](Guide_Manga_SimASSP_Eleve.docx).
 
-Le pied de page de l'application et du guide mentionne **DWYN Solutions** avec son logo.
+L'histoire de Léa, élève en Bac Pro ASSP, en 6 cases : elle découvre les 102 scénarios, **scanne le QR code du site**, se connecte, choisit un scénario, suit sa progression et interpelle l'Assistant Soins en cas de doute. Le **vrai QR code** du site est intégré dans la page pour ouvrir l'application directement sur téléphone. Le pied de page mentionne **DWYN Solutions**.
 
 ## 🚀 Accès en ligne
 
