@@ -1,6 +1,6 @@
 /* SimASSP — Service worker (app shell hors-ligne)
-   v2 — 20/11/2026 : correction de mise a jour.
-   - bump de cache : les anciens visiteurs (v1) purgent leur vieux cache
+   v3 — 21/11/2026 : suppression multiple, affichage mdp, fix reset mdp.
+   - bump de cache : les anciens visiteurs (v2) purgent leur vieux cache
      a l'activation du nouveau SW.
    - scripts/CSS en NETWORK-FIRST : chaque mise a jour deployee est visible
      au rechargement suivant ; le cache ne sert qu'en hors-ligne.
@@ -9,8 +9,8 @@
      fonctionne par URL exacte). */
 "use strict";
 
-var CACHE = "simassp-shell-v2";
-var VERSION = "20261120";
+var CACHE = "simassp-shell-v3";
+var VERSION = "20261121";
 var SHELL = [
   "./",
   "./index.html",

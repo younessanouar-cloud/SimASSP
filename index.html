@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20261121" />
 </head>
 <body>
   <!-- ============ LOADER ============ -->
@@ -391,10 +391,10 @@
   <!-- ?v= cache-busting : indispensable apres une MAJ — le Service Worker des
        anciens visiteurs sert les scripts cache-first ; une URL nouvelle force
        le reseau et livre le nouveau code des le rechargement suivant. -->
-  <script src="js/supabase.js?v=20261120"></script>
-  <script src="js/storage.js?v=20261120"></script>
-  <script src="js/data.js?v=20261120"></script>
-  <script src="js/scenarios_extra.js?v=20261120"></script>
+  <script src="js/supabase.js?v=20261121"></script>
+  <script src="js/storage.js?v=20261121"></script>
+  <script src="js/data.js?v=20261121"></script>
+  <script src="js/scenarios_extra.js?v=20261121"></script>
   <script>
     // Fusion des scénarios supplémentaires
     (function () {
@@ -403,8 +403,8 @@
       }
     })();
   </script>
-  <script src="js/crypto.js?v=20261120"></script>
-  <script src="js/app.js?v=20261120"></script>
+  <script src="js/crypto.js?v=20261121"></script>
+  <script src="js/app.js?v=20261121"></script>
   <script>
     // PWA : installation hors-ligne (HTTPS / localhost uniquement).
     if ("serviceWorker" in navigator &&

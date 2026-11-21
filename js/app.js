@@ -51,20 +51,23 @@
       return cached || [];
     },
     saveAccounts: async function () {
-      // Sauvegarder chaque account comme une ligne
+      // Snapshot OBLIGATOIRE : des qu'une ligne est upsertée, le callback
+      // Realtime recharge les comptes. Sans snapshot, la boucle lirait des
+      // objets remplaces avec leur ANCIEN hash (bug du reset mdp).
+      var snapshot = AUTH.accounts.slice();
+      snapshot.forEach(function (a) { markLocalWrite(a.id); });
       if (window.Storage) {
         try {
-          // Supprimer les anciens
-          // On upsert chaque account
-          for (var i = 0; i < AUTH.accounts.length; i++) {
-            await window.Storage.set("accounts", AUTH.accounts[i].id, AUTH.accounts[i]);
+          for (var i = 0; i < snapshot.length; i++) {
+            await window.Storage.set("accounts", snapshot[i].id, snapshot[i]);
           }
         } catch (e) { console.warn("saveAccounts SB:", e && e.message); }
       }
       try { localStorage.setItem("simassp_accounts", JSON.stringify(AUTH.accounts)); } catch (e) {}
     },
-    // Ecriture ciblee : sous RLS, un eleve ne peut ecrire QUE sa propre ligne.
+    // Ecriture ciblee : une seule ligne, une seule notification Realtime.
     saveAccount: async function (acc) {
+      markLocalWrite(acc.id);
       if (window.Storage) {
         try { await window.Storage.set("accounts", acc.id, acc); } catch (e) {}
       }
@@ -147,20 +150,26 @@
         mustChangePassword: true
       };
       AUTH.accounts.push(acc);
-      await AUTH.saveAccounts();
+      await AUTH.saveAccount(acc);
       return { account: acc, password: pwd };
     },
     resetPassword: async function (id) {
+      // Calculer le hash AVANT de toucher au compte : pendant l'await PBKDF2,
+      // un evenement Realtime peut remplacer AUTH.accounts.
+      var pwd = AUTH.genPassword();
+      var hash = await AUTH.hashPassword(pwd);
+      // Retrouver le compte dans le tableau COURANT (eventuellement remplace).
       var acc = null;
       for (var i = 0; i < AUTH.accounts.length; i++) {
         if (AUTH.accounts[i].id === id) { acc = AUTH.accounts[i]; break; }
       }
       if (!acc) return null;
-      var pwd = AUTH.genPassword();
-      acc.passwordHash = await AUTH.hashPassword(pwd);
+      acc.passwordHash = hash;
       acc.hashAlgo = "pbkdf2-sha256";
       acc.mustChangePassword = true;
-      await AUTH.saveAccounts();
+      // Ecriture CIBLEE : une seule ligne, sinon la tempete Realtime
+      // re-ecrit l'ancien hash avant que la ligne du compte ne soit atteinte.
+      await AUTH.saveAccount(acc);
       return pwd;
     },
     deleteAccount: function (id) {
@@ -201,6 +210,33 @@
       }
     }
   };
+
+  // Ecritures locales : le callback Realtime ne doit jamais ecraser une valeur
+  // locale fraichement modifiee (cause racine du bug "reset mdp non reconnu").
+  var _writeStamps = {};
+  function markLocalWrite(id) { _writeStamps[id] = Date.now(); }
+  function isRecentLocalWrite(id) { return Date.now() - (_writeStamps[id] || 0) < 5000; }
+
+  // Fusionne les comptes recus de Supabase SANS remplacer le tableau : le
+  // callback Realtime peut arriver en pleine boucle d'ecriture (saveAccounts).
+  function mergeRemoteAccounts(target, incoming, deletedIds) {
+    var seen = {};
+    (incoming || []).forEach(function (remote) {
+      if (!remote || !remote.id) return;
+      seen[remote.id] = true;
+      if (deletedIds.indexOf(remote.id) !== -1) return;
+      if (isRecentLocalWrite(remote.id)) return; // garder la version locale
+      var idx = -1;
+      for (var j = 0; j < target.length; j++) {
+        if (target[j].id === remote.id) { idx = j; break; }
+      }
+      if (idx === -1) target.push(remote);
+      else target[idx] = remote;
+    });
+    for (var k = target.length - 1; k >= 0; k--) {
+      if (!seen[target[k].id] && deletedIds.indexOf(target[k].id) === -1) target.splice(k, 1);
+    }
+  }
 
   // charger les comptes
   AUTH.accounts = [];
@@ -255,18 +291,20 @@
       return cached || [];
     },
     saveAccounts: async function () {
+      var snapshot = TEACHER_AUTH.accounts.slice();
+      snapshot.forEach(function (a) { markLocalWrite(a.id); });
       if (window.Storage) {
         try {
-          for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
-            await window.Storage.set("teachers", TEACHER_AUTH.accounts[i].id, TEACHER_AUTH.accounts[i]);
+          for (var i = 0; i < snapshot.length; i++) {
+            await window.Storage.set("teachers", snapshot[i].id, snapshot[i]);
           }
         } catch (e) { console.warn("saveTeachers SB:", e && e.message); }
       }
       try { localStorage.setItem("simassp_teachers", JSON.stringify(TEACHER_AUTH.accounts)); } catch (e) {}
     },
-    // Ecriture ciblee : un enseignant peut ecrire toutes les lignes, mais on
-    // limite tout de meme aux comptes presents en memoire pour eviter le bruit.
+    // Ecriture ciblee : une seule ligne, une seule notification Realtime.
     saveAccount: async function (acc) {
+      markLocalWrite(acc.id);
       if (window.Storage) {
         try { await window.Storage.set("teachers", acc.id, acc); } catch (e) {}
       }
@@ -335,20 +373,21 @@
         mustChangePassword: true
       };
       TEACHER_AUTH.accounts.push(acc);
-      await TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccount(acc);
       return { account: acc, password: pwd };
     },
     resetPassword: async function (id) {
+      var pwd = TEACHER_AUTH.genPassword();
+      var hash = await TEACHER_AUTH.hashPassword(pwd);
       var acc = null;
       for (var i = 0; i < TEACHER_AUTH.accounts.length; i++) {
         if (TEACHER_AUTH.accounts[i].id === id) { acc = TEACHER_AUTH.accounts[i]; break; }
       }
       if (!acc) return null;
-      var pwd = TEACHER_AUTH.genPassword();
-      acc.passwordHash = await TEACHER_AUTH.hashPassword(pwd);
+      acc.passwordHash = hash;
       acc.hashAlgo = "pbkdf2-sha256";
       acc.mustChangePassword = true;
-      await TEACHER_AUTH.saveAccounts();
+      await TEACHER_AUTH.saveAccount(acc);
       return pwd;
     },
     deleteAccount: function (id) {
@@ -1474,13 +1513,49 @@
       '<div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn btn--sm btn--accent" onclick="exportAccounts()">📤 Exporter la liste</button>' +
       '<button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="importAccounts()">📥 Importer une liste</button></div>' +
-      '<h4 style="color:var(--c-primary);margin:14px 0 8px;">📋 Comptes existants (' + accounts.length + ')</h4>' +
+      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 8px;">' +
+      '<h4 style="color:var(--c-primary);margin:0;">📋 Comptes existants (' + accounts.length + ')</h4>' +
+      (accounts.length ? '<label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--c-muted);cursor:pointer;"><input type="checkbox" id="selAllEleves" onchange="toggleAllEleves(this.checked)" /> Tout sélectionner</label>' +
+        '<button class="btn btn--sm" id="btnDeleteSelected" onclick="deleteSelectedAccounts()" disabled style="color:var(--c-danger);border:1px solid var(--c-danger);background:transparent;opacity:.5;">🗑️ Supprimer la sélection (<span id="nbElevesSelected">0</span>)</button>' : '') +
+      '</div>' +
       (accounts.length === 0 ? '<p class="muted">Aucun compte créé.</p>' :
-        '<div class="table-wrap"><table class="table"><thead><tr><th>Identifiant</th><th>Nom</th><th>Niveau</th><th>Classe</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
+        '<div class="table-wrap"><table class="table"><thead><tr><th style="width:34px;"></th><th>Identifiant</th><th>Nom</th><th>Niveau</th><th>Classe</th><th>Créé le</th><th>Actions</th></tr></thead><tbody>' +
         accounts.map(function (a) {
-          return '<tr><td><code>' + a.login + '</code></td><td>' + a.prenom + ' ' + a.nom + '</td><td>' + (a.niveau === "2" ? "2de" : a.niveau === "1" ? "1re" : "Tle") + '</td><td>' + (a.classe || "—") + '</td><td style="font-size:.75rem;">' + a.created + '</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-border);" onclick="resetPwd(\'' + a.id + '\')">🔄 Reset mdp</button><button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="deleteAccount(\'' + a.id + '\')">🗑️</button></td></tr>';
+          return '<tr><td><input type="checkbox" class="sel-eleve" value="' + a.id + '" onchange="updateEleveSelection()" aria-label="Sélectionner ' + a.login + '" /></td><td><code>' + a.login + '</code></td><td>' + a.prenom + ' ' + a.nom + '</td><td>' + (a.niveau === "2" ? "2de" : a.niveau === "1" ? "1re" : "Tle") + '</td><td>' + (a.classe || "—") + '</td><td style="font-size:.75rem;">' + a.created + '</td><td style="display:flex;gap:4px;flex-wrap:wrap;"><button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-border);" onclick="resetPwd(\'' + a.id + '\')">🔄 Reset mdp</button><button class="btn btn--sm btn--ghost" style="color:var(--c-danger);border:1px solid var(--c-danger);" onclick="deleteAccount(\'' + a.id + '\')">🗑️</button></td></tr>';
         }).join("") + '</tbody></table></div>');
   }
+
+  // ---------- SELECTION MULTIPLE (suppression en lot) ----------
+  window.updateEleveSelection = function () {
+    var boxes = document.querySelectorAll(".sel-eleve");
+    var n = 0;
+    for (var i = 0; i < boxes.length; i++) if (boxes[i].checked) n++;
+    var lbl = document.getElementById("nbElevesSelected");
+    if (lbl) lbl.textContent = String(n);
+    var btn = document.getElementById("btnDeleteSelected");
+    if (btn) {
+      btn.disabled = n === 0;
+      btn.style.opacity = n === 0 ? ".5" : "1";
+    }
+    var all = document.getElementById("selAllEleves");
+    if (all) all.checked = n > 0 && n === boxes.length;
+  };
+  window.toggleAllEleves = function (checked) {
+    var boxes = document.querySelectorAll(".sel-eleve");
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = checked;
+    window.updateEleveSelection();
+  };
+  window.deleteSelectedAccounts = async function () {
+    var boxes = document.querySelectorAll(".sel-eleve:checked");
+    if (!boxes.length) { toast("Sélectionne au moins un compte."); return; }
+    var ids = [];
+    for (var i = 0; i < boxes.length; i++) ids.push(boxes[i].value);
+    if (!confirm("Supprimer " + ids.length + " compte(s) élève(s) et toute leur progression ?")) return;
+    for (var j = 0; j < ids.length; j++) AUTH.deleteAccount(ids[j]);
+    await AUTH.saveAccounts();
+    toast(ids.length + " compte(s) supprimé(s). ✅");
+    renderTeacherTab("comptes");
+  };
 
   window.createAccount = async function () {
     var prenom = document.getElementById("newPrenom").value.trim();
@@ -2094,10 +2169,43 @@
     toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
   };
 
+  // ---------- AFFICHER / MASQUER LES MOTS DE PASSE ----------
+  function addPasswordToggles(root) {
+    var scope = root || document;
+    var inputs = scope.querySelectorAll('input[type="password"]:not([data-pwd-toggle])');
+    for (var i = 0; i < inputs.length; i++) {
+      var input = inputs[i];
+      input.setAttribute("data-pwd-toggle", "1");
+      var field = document.createElement("span");
+      field.className = "pwd-field";
+      input.parentNode.insertBefore(field, input);
+      field.appendChild(input);
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pwd-toggle-btn";
+      btn.textContent = "👁";
+      btn.title = "Afficher le mot de passe";
+      btn.setAttribute("aria-label", btn.title);
+      (function (inp, b) {
+        b.addEventListener("click", function () {
+          var show = inp.type === "password";
+          inp.type = show ? "text" : "password";
+          b.textContent = show ? "🙈" : "👁";
+          b.title = show ? "Masquer le mot de passe" : "Afficher le mot de passe";
+          b.setAttribute("aria-label", b.title);
+          inp.focus();
+        });
+      })(input, btn);
+      field.appendChild(btn);
+    }
+  }
+  window.addPasswordToggles = addPasswordToggles;
+
   // ---------- MODAL ----------
   window.openModal = function (html) {
     var mc = document.getElementById("modalContent");
     if (mc) mc.innerHTML = html;
+    addPasswordToggles(mc);
     var m = document.getElementById("modal");
     if (m) m.hidden = false;
   };
@@ -2150,6 +2258,8 @@
   // ---------- INIT ----------
   async function init() {
     try { window.showView = showView; } catch (e) { console.error("showView", e); }
+    // Boutons 👁 / 🙈 sur tous les champs de mot de passe
+    try { addPasswordToggles(document); } catch (e) { console.warn("addPasswordToggles:", e); }
     // Attendre Supabase
     if (window.SB_READY) { try { await window.SB_READY; } catch (e) {} }
     // Charger les comptes depuis Supabase (ou cache local)
@@ -2224,25 +2334,14 @@
       window.SB_SUBSCRIBE(function (payload) {
         var ns = payload && payload.new && payload.new.namespace;
         if (ns === "accounts" || ns === "teachers") {
+          // Fusion EN PLACE : ne jamais remplacer AUTH.accounts (une boucle
+          // d'ecriture pourrait encore l'utiliser), et ignorer les comptes
+          // modifies localement il y a moins de 5 s.
           AUTH.loadAccounts().then(function (a) {
-            var merged = (a || []).slice();
-            var ids = merged.map(function (x) { return x.id; });
-            (AUTH.accounts || []).forEach(function (c) {
-              if (AUTH.deletedIds.indexOf(c.id) !== -1) return;
-              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
-            });
-            merged = merged.filter(function (x) { return AUTH.deletedIds.indexOf(x.id) === -1; });
-            AUTH.accounts = merged;
+            mergeRemoteAccounts(AUTH.accounts, a || [], AUTH.deletedIds);
           }).catch(function () {});
           TEACHER_AUTH.loadAccounts().then(function (a) {
-            var merged = (a || []).slice();
-            var ids = merged.map(function (x) { return x.id; });
-            (TEACHER_AUTH.accounts || []).forEach(function (c) {
-              if (TEACHER_AUTH.deletedIds.indexOf(c.id) !== -1) return;
-              if (ids.indexOf(c.id) === -1) { merged.push(c); ids.push(c.id); }
-            });
-            merged = merged.filter(function (x) { return TEACHER_AUTH.deletedIds.indexOf(x.id) === -1; });
-            TEACHER_AUTH.accounts = merged;
+            mergeRemoteAccounts(TEACHER_AUTH.accounts, a || [], TEACHER_AUTH.deletedIds);
           }).catch(function () {});
         }
       });

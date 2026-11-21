@@ -9,6 +9,7 @@ Application web accessible en ligne qui aide les élèves de Bac Pro ASSP à acq
 - 🪞 **Autoévaluation et carnet réflexif** : par critères observables (bientraitance, communication, sécurité, limites professionnelles, transmission, réflexivité, qualité, éducation à la santé). La réflexion saisie à la fin d'un scénario est conservée et valorisée dans le tableau de bord, l'export bilan PDF et le carnet de bord de l'espace enseignant.
 - 📊 **Tableau de progression** : KPI, progression par bloc et par compétence, historique (avec colonne « Réflexivité »), export JSON.
 - 👩‍🏫 **Espace enseignant/tuteur** : suivi, liste des scénarios, bilan de progression et carnet de bord réflexif par élève (mot de passe par défaut `ecbg2026`). Un bouton de retour permanent et un logo contextuel évitent d'être bloqué sur l'accueil après un clic sur le bandeau « Bac Pro ASSP ».
+- 🗑️ **Gestion des comptes** : création, réinitialisation et **suppression multiple** des comptes élèves (cases à cocher + « Tout sélectionner » + bouton « Supprimer la sélection »). Chaque champ de mot de passe dispose d'un bouton **👁 / 🙈** pour afficher ou masquer la saisie.
 
 ## 🚀 Accès en ligne
 
@@ -71,6 +72,7 @@ SimASSP/
 │   ├── gen_icons.py              # régénération des icônes PWA
 │   ├── verif_ameliorations.py    # filtres, carnet, navigation, PBKDF2, PWA hors-ligne
 │   ├── verif_auth_pbkdf2.py      # migration, création, reset, changement de mot de passe
+│   ├── verif_comptes.py          # suppression multiple + bouton 👁 afficher/masquer
 │   ├── verif_rls_option_b.py     # RPC simulées : claim, migration, isolation, repli
 │   └── verif_navigateur_plage.py # validation navigateur de tous les scénarios
 └── README.md
