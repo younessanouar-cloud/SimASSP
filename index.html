@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261121e" />
+  <link rel="stylesheet" href="css/style.css?v=20261121f" />
 </head>
 <body>
   <!-- ============ LOADER ============ -->
@@ -284,7 +284,7 @@
           <div class="soins-msg soins-msg--bot">
             <div class="soins-avatar">🤖</div>
             <div class="soins-bubble">
-              <p class="soins-def">Bonjour 👋 Je suis l’<b>Assistant Soins</b>. Je connais <b id="soinsCount">145</b> notions techniques du Bac Pro ASSP : définitions, gestes, sigles et conduites à tenir.</p>
+              <p class="soins-def">Bonjour 👋 Je suis l’<b>Assistant Soins</b>. Je connais <b id="soinsCount">253</b> notions techniques du Bac Pro ASSP : anatomie, définitions étendues, gestes, sigles et conduites à tenir, avec 12 schémas illustrés.</p>
               <p class="soins-note">Exemple : « c’est quoi la bientraitance ? », « que faire si une personne chute ? » ou « différence entre asepsie et antisepsie ».</p>
             </div>
           </div>
@@ -334,8 +334,59 @@
           <button class="tab" data-tab="pfmp">📋 PFMP</button>
           <button class="tab" data-tab="scenarios">🎬 Scénarios</button>
           <button class="tab" data-tab="bilans">📈 Bilans</button>
+          <button class="tab" data-tab="assistant">🤖 Assistant Soins</button>
         </div>
         <div class="tab-content" id="teacherTabContent"></div>
+
+        <!-- Assistant Soins — panneau enseignant (conversation conservée) -->
+        <div class="teacher-soins" id="teacherSoinsPanel" hidden>
+          <div class="soins-prof-intro">
+            <div>
+              <h3>🤖 Assistant Soins — espace enseignant</h3>
+              <p class="muted">Le même moteur pédagogique que celui des élèves, avec l'anatomie, les gestes professionnels et les schémas. Idéal pour préparer un cours, vérifier une définition ou projeter un schéma.</p>
+            </div>
+            <div class="soins-prof-stats">
+              <span><b id="soinsProfCount">253</b> notions</span>
+              <span><b id="soinsProfIlluCount">12</b> schémas</span>
+            </div>
+          </div>
+          <div class="soins-prof-actions">
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-primary);" onclick="openSoinsGallery()">🗺️ Galerie des schémas</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="toggleSoinsLexique('prof')">📚 Lexique complet</button>
+            <button class="btn btn--sm btn--ghost" style="color:var(--c-text);border:1px solid var(--c-border);" onclick="clearSoins('prof')">🗑️ Effacer</button>
+          </div>
+          <div class="soins-prof-revision">
+            <span>Révision rapide par bloc :</span>
+            <button class="soins-chip" onclick="soinsBlocRevision('B1')">B1 · Accompagnement</button>
+            <button class="soins-chip" onclick="soinsBlocRevision('B2')">B2 · Soins et surveillance</button>
+            <button class="soins-chip" onclick="soinsBlocRevision('B3')">B3 · Équipe et transmission</button>
+            <button class="soins-chip" onclick="soinsBlocRevision('B4')">B4 · Éducation à la santé</button>
+          </div>
+          <div class="soins-chat soins-chat--prof">
+            <div class="soins-chat__quick" id="soinsQuickProf">
+              <span class="soins-quick-label">🚀 Questions utiles en cours</span>
+              <button class="soins-chip" onclick="askSoinsBot('Explique-moi les appareils digestif et respiratoire et montre-moi les schémas')">Anatomie</button>
+              <button class="soins-chip" onclick="askSoinsBot('Que faire en cas de fausse route ?')">Fausse route</button>
+              <button class="soins-chip" onclick="askSoinsBot('Différence entre asepsie et antisepsie')">Asepsie / Antisepsie</button>
+              <button class="soins-chip" onclick="askSoinsBot('Explique-moi la méthode SBAR et montre le schéma')">SBAR</button>
+            </div>
+            <div class="soins-chat__messages" id="soinsMessagesProf" aria-live="polite">
+              <div class="soins-msg soins-msg--bot">
+                <div class="soins-avatar">🤖</div>
+                <div class="soins-bubble">
+                  <p class="soins-def">Bonjour 👋 Je suis l'<b>Assistant Soins</b>. Je connais <b id="soinsProfCountMsg">253</b> notions techniques et <b>12</b> schémas anatomiques. Posez une question, ou utilisez « 🗺️ Galerie des schémas » pour préparer votre séance.</p>
+                  <p class="soins-note">Les schémas sont pédagogiques et simplifiés : ils servent à situer et à nommer, pas à diagnostiquer.</p>
+                </div>
+              </div>
+            </div>
+            <div class="soins-chat__composer">
+              <input type="text" id="soinsInputProf" class="input" placeholder="Votre question (ex. : c'est quoi un néphron ?)" autocomplete="off" />
+              <button class="btn btn--primary btn--sm" onclick="sendSoins('prof')">Envoyer ➤</button>
+              <button class="btn btn--sm btn--ghost" style="color:var(--c-muted);border:1px solid var(--c-border);" onclick="clearSoins('prof')" title="Effacer la conversation">🗑️</button>
+            </div>
+            <div class="soins-lexique-panel" id="soinsLexiqueProf" hidden></div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -352,6 +403,22 @@
     <div class="modal__box">
       <button class="modal__close" id="modalClose">✕</button>
       <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- ============ SCHÉMAS ANATOMIQUES (lightbox) ============ -->
+  <div class="soins-lightbox" id="soinsLightbox" hidden>
+    <div class="soins-lightbox__backdrop" onclick="closeSoinsIllu()"></div>
+    <div class="soins-lightbox__box" role="dialog" aria-modal="true" aria-label="Schéma anatomique">
+      <div class="soins-lightbox__head">
+        <h3 id="soinsIlluTitle">Schéma</h3>
+        <button class="soins-lightbox__close" id="soinsIlluClose" onclick="closeSoinsIllu()" title="Fermer (Échap)">✕</button>
+      </div>
+      <div class="soins-lightbox__body" id="soinsIlluBody"></div>
+      <p class="soins-note" id="soinsIlluLegend"></p>
+      <div class="soins-lightbox__foot">
+        <button class="btn btn--sm btn--ghost" style="color:var(--c-primary);border:1px solid var(--c-primary);" onclick="openSoinsGallery()">🗺️ Tous les schémas</button>
+      </div>
     </div>
   </div>
 
@@ -405,10 +472,10 @@
   <!-- ?v= cache-busting : indispensable apres une MAJ — le Service Worker des
        anciens visiteurs sert les scripts cache-first ; une URL nouvelle force
        le reseau et livre le nouveau code des le rechargement suivant. -->
-  <script src="js/supabase.js?v=20261121e"></script>
-  <script src="js/storage.js?v=20261121e"></script>
-  <script src="js/data.js?v=20261121e"></script>
-  <script src="js/scenarios_extra.js?v=20261121e"></script>
+  <script src="js/supabase.js?v=20261121f"></script>
+  <script src="js/storage.js?v=20261121f"></script>
+  <script src="js/data.js?v=20261121f"></script>
+  <script src="js/scenarios_extra.js?v=20261121f"></script>
   <script>
     // Fusion des scénarios supplémentaires
     (function () {
@@ -417,10 +484,13 @@
       }
     })();
   </script>
-  <script src="js/crypto.js?v=20261121e"></script>
-  <script src="js/soins_lexique.js?v=20261121e"></script>
-  <script src="js/soins_bot.js?v=20261121e"></script>
-  <script src="js/app.js?v=20261121e"></script>
+  <script src="js/crypto.js?v=20261121f"></script>
+  <script src="js/soins_lexique.js?v=20261121f"></script>
+  <script src="js/soins_anatomie.js?v=20261121f"></script>
+  <script src="js/soins_infirmier.js?v=20261121f"></script>
+  <script src="js/soins_illustrations.js?v=20261121f"></script>
+  <script src="js/soins_bot.js?v=20261121f"></script>
+  <script src="js/app.js?v=20261121f"></script>
   <script>
     // PWA : installation hors-ligne (HTTPS / localhost uniquement).
     if ("serviceWorker" in navigator &&

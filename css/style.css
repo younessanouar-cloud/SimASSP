@@ -439,6 +439,66 @@ main#app { max-width: 1240px; margin: 0 auto; padding: 24px 20px 60px; }
 .soins-lex-item b { display: block; color: var(--c-primary); }
 .soins-lex-item span { display: block; color: var(--c-muted); font-size: .74rem; margin-top: 2px; }
 
+/* ---------- Assistant Soins : détails étendus, schémas, espace prof ---------- */
+.soins-block--detail { border-left-color: #6a1b9a; background: #f6eefb; }
+.soins-illu-btn {
+  margin: 8px 0 2px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #6a1b9a; background: #fff; color: #6a1b9a;
+  font-family: inherit; font-size: .78rem; font-weight: 700;
+}
+.soins-illu-btn:hover { background: #f6eefb; }
+.soins-illu-mark { font-size: .72rem; }
+.tab-content[hidden], .teacher-soins[hidden], .soins-lightbox[hidden] { display: none !important; }
+
+.teacher-soins { margin-top: 6px; }
+.soins-prof-intro {
+  display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
+  background: #f7f9fd; border: 1px solid var(--c-border); border-radius: var(--radius); padding: 14px 18px;
+}
+.soins-prof-intro h3 { margin: 0 0 6px; color: var(--c-primary); font-size: 1.05rem; }
+.soins-prof-intro p { margin: 0; max-width: 720px; font-size: .85rem; line-height: 1.5; }
+.soins-prof-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.soins-prof-stats span {
+  background: #fff; border: 1px solid var(--c-border); border-radius: 999px;
+  padding: 6px 12px; font-size: .78rem; color: var(--c-muted); white-space: nowrap;
+}
+.soins-prof-stats b { color: var(--c-primary); font-size: .95rem; }
+.soins-prof-actions, .soins-prof-revision {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0;
+}
+.soins-prof-revision span { font-size: .8rem; font-weight: 700; color: var(--c-muted); }
+.soins-chat--prof .soins-chat__messages { height: 380px; }
+
+.soins-lightbox {
+  position: fixed; inset: 0; z-index: 500;
+  display: grid; place-items: center; padding: 18px;
+}
+.soins-lightbox__backdrop { position: absolute; inset: 0; background: rgba(12, 24, 42, .62); }
+.soins-lightbox__box {
+  position: relative; z-index: 1; width: min(820px, 100%); max-height: 92vh; overflow-y: auto;
+  background: #fff; border-radius: 14px; box-shadow: 0 18px 60px rgba(0,0,0,.35); padding: 18px 20px 16px;
+}
+.soins-lightbox__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.soins-lightbox__head h3 { margin: 0; color: var(--c-primary); font-size: 1.1rem; }
+.soins-lightbox__close {
+  border: none; background: #eef3fa; color: var(--c-primary); border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; font-size: .95rem;
+}
+.soins-lightbox__body { margin: 12px 0 4px; }
+.soins-lightbox__body svg { width: 100%; height: auto; display: block; }
+.soins-lightbox__foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+.soins-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.soins-gallery__item {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px; cursor: pointer;
+  border: 1px solid var(--c-border); border-radius: 10px; background: #fbfcfe;
+  font-family: inherit; color: var(--c-text); text-align: left;
+}
+.soins-gallery__item:hover { border-color: var(--c-primary); background: #eef3fa; }
+.soins-gallery__item b { font-size: .8rem; color: var(--c-primary); }
+.soins-gallery__thumb { display: block; overflow: hidden; border-radius: 6px; }
+.soins-gallery__thumb svg { width: 100%; height: auto; display: block; pointer-events: none; }
+
 .fab-soins {
   position: fixed; bottom: 24px; right: 24px; z-index: 150;
   width: 56px; height: 56px; border-radius: 50%; border: none;

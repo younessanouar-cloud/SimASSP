@@ -69,7 +69,7 @@ with sync_playwright() as p:
     verifier(page.locator("#view-soins.view--active").count() == 1, "Vue Assistant Soins non active")
     verifier(page.locator("#view-soins iframe").count() == 0, "Un iframe Mathéo subsiste encore")
     verifier("Assistant Soins" in page.locator("#view-soins h1").inner_text(), "Titre incorrect")
-    verifier(page.locator("#soinsCount").inner_text() == "145", "Compteur de notions incorrect")
+    verifier(page.locator("#soinsCount").inner_text() == "253", "Compteur de notions incorrect")
     n = page.locator("#soinsMessages .soins-msg").count()
 
     # 1. Définition simple

@@ -10,7 +10,8 @@
     return {
       terme: e[0], def: e[1], syn: e[2], bloc: e[3], comp: e[4],
       retenir: e[5], exemple: e[6], lies: (e[7] || "").split("|").filter(Boolean),
-      search: norm(e[0] + " " + e[2] + " " + e[1])
+      detail: e[8] || "", illu: e[9] || "", cat: e[10] || "",
+      search: norm(e[0] + " " + e[2] + " " + e[1] + " " + (e[8] || ""))
     };
   });
 
@@ -98,7 +99,12 @@
   }
 
   function chip(label, question) {
-    return '<button class="soins-chip" onclick="askSoinsBot(' + JSON.stringify(question).replace(/"/g, "&quot;") + ')">' + esc(label) + '</button>';
+    // Le contexte (élève ou enseignant) est conservé pour que les suggestions
+    // répondent dans le MÊME chat que celui où la question a été posée.
+    var scope = window.SOINS_SCOPE === "prof" ? "prof" : "eleve";
+    return '<button class="soins-chip" onclick="askSoinsBot(' +
+      JSON.stringify(question).replace(/"/g, "&quot;") + ',' +
+      JSON.stringify(scope).replace(/"/g, "&quot;") + ')">' + esc(label) + '</button>';
   }
 
   function canonical(name) {
@@ -109,7 +115,7 @@
 
   function card(e, mode) {
     var h = '<div class="soins-card">';
-    h += '<div class="soins-card__head"><span class="soins-badge">' + esc(e.bloc) + ' · ' + esc(e.comp) + '</span>' +
+    h += '<div class="soins-card__head"><span class="soins-badge">' + esc(e.cat || (e.bloc + ' · ' + e.comp)) + '</span>' +
          '<span class="soins-card__title">' + esc(e.terme) + '</span></div>';
     h += '<p class="soins-def"><b>Définition.</b> ' + esc(e.def) + '</p>';
     if (e.retenir && (mode === "definition" || mode === "action")) {
@@ -117,6 +123,13 @@
     }
     if (e.exemple && (mode === "action" || mode === "example" || mode === "definition")) {
       h += '<div class="soins-block soins-block--ex">📌 <b>Exemple.</b> ' + esc(e.exemple) + '</div>';
+    }
+    if (e.detail) {
+      h += '<div class="soins-block soins-block--detail">🔎 <b>Pour aller plus loin.</b> ' + esc(e.detail) + '</div>';
+    }
+    if (e.illu && window.SOINS_ILLUSTRATIONS && window.SOINS_ILLUSTRATIONS[e.illu]) {
+      h += '<button class="soins-illu-btn" onclick="openSoinsIllu(' +
+        JSON.stringify(e.illu).replace(/"/g, "&quot;") + ')">🖼️ Voir le schéma anatomique</button>';
     }
     if (mode === "action" && e.retenir) {
       h += '<p class="soins-note">En situation : applique le geste ci-dessus, puis transmets et trace dans le dossier de soins.</p>';
@@ -158,7 +171,9 @@
         '<li>donner la <b>définition</b> d’un terme (ex. : « c’est quoi la bientraitance ? »),</li>' +
         '<li>expliquer une <b>conduite à tenir</b> (ex. : « que faire en cas d’hypoglycémie ? »),</li>' +
         '<li>comparer deux notions (ex. : « différence entre asepsie et antisepsie »),</li>' +
-        '<li>décoder un <b>sigle</b> (EHPAD, AES, DASRI, GIR…).</li></ul>' +
+        '<li>décoder un <b>sigle</b> (EHPAD, AES, DASRI, GIR…),</li>' +
+        '<li>explorer l’<b>anatomie</b> (appareils digestif, respiratoire, urinaire, reproducteur…) avec des <b>schémas illustrés</b>.</li></ul>' +
+        '<p class="soins-note">Clique sur « 🗺️ Schémas » pour voir toutes les illustrations, ou sur « 📚 Lexique » pour parcourir les notions par thème.</p>' +
         '<p class="soins-note">Mes réponses sont pédagogiques et fictives : elles ne remplacent ni un professionnel ni un protocole d’établissement.</p>' };
     }
 
@@ -188,16 +203,27 @@
 
   function lexiqueHTML() {
     var h = '<div class="soins-lexique">';
-    var bloc = "";
-    allTerms().forEach(function (e) {
-      if (e.bloc !== bloc) {
-        bloc = e.bloc;
-        h += '<h4 class="soins-lex-titre">Bloc ' + esc(bloc) + '</h4><div class="soins-lex-grid">';
-      }
-      h += '<button class="soins-lex-item" onclick="askSoinsBot(' + JSON.stringify("Explique-moi " + e.terme).replace(/"/g, "&quot;") + ')">' +
-        '<b>' + esc(e.terme) + '</b><span>' + esc(e.def.slice(0, 95)) + (e.def.length > 95 ? "…" : "") + '</span></button>';
+    var terms = allTerms().sort(function (a, b) {
+      var ca = (a.cat || ("Bloc " + a.bloc)).localeCompare(b.cat || ("Bloc " + b.bloc), "fr");
+      return ca || a.terme.localeCompare(b.terme, "fr");
     });
-    return h + '</div></div>';
+    var groupe = "";
+    var open = false;
+    terms.forEach(function (e) {
+      var g = e.cat || ("Bloc " + e.bloc);
+      if (g !== groupe) {
+        if (open) h += '</div>';
+        groupe = g;
+        open = true;
+        h += '<h4 class="soins-lex-titre">' + esc(groupe) + '</h4><div class="soins-lex-grid">';
+      }
+      h += '<button class="soins-lex-item" onclick="askSoinsBot(' +
+        JSON.stringify("Explique-moi " + e.terme).replace(/"/g, "&quot;") + ')">' +
+        '<b>' + esc(e.terme) + (e.illu ? ' <span class="soins-illu-mark" title="Schéma disponible">🖼️</span>' : '') + '</b>' +
+        '<span>' + esc(e.def.slice(0, 95)) + (e.def.length > 95 ? "…" : "") + '</span></button>';
+    });
+    if (open) h += '</div>';
+    return h + '</div>';
   }
 
   // Révision ciblée après un scénario : notions clés du bloc.
@@ -225,6 +251,8 @@
     lexiqueHTML: lexiqueHTML,
     blocAnswer: blocAnswer,
     count: LEX.length,
+    countDetails: LEX.filter(function (e) { return !!e.detail; }).length,
+    illustrations: window.SOINS_ILLUSTRATIONS || {},
     normalize: norm
   };
 })();

@@ -1143,6 +1143,7 @@
   window.askScenarioSoins = function () {
     var s = STATE.scenario;
     if (!s) return;
+    window.SOINS_SCOPE = "eleve"; // les suggestions restent dans le chat élève
     showView("soins");
     var bloc = window.SOINS_BOT && window.SOINS_BOT.blocAnswer
       ? window.SOINS_BOT.blocAnswer(s.bloc)
@@ -1516,6 +1517,18 @@
   function renderTeacherTab(tab) {
     var c = document.getElementById("teacherTabContent");
     if (!c) return;
+    // L'Assistant Soins a son propre panneau : la conversation survit aux
+    // changements d'onglet (les autres onglets sont rendus à la volée).
+    var soinsPanel = document.getElementById("teacherSoinsPanel");
+    if (soinsPanel) soinsPanel.hidden = (tab !== "assistant");
+    c.hidden = (tab === "assistant");
+    if (tab === "assistant") {
+      var cnt = document.getElementById("soinsProfCount");
+      var cntMsg = document.getElementById("soinsProfCountMsg");
+      if (cnt && window.SOINS_BOT) cnt.textContent = String(window.SOINS_BOT.count);
+      if (cntMsg && window.SOINS_BOT) cntMsg.textContent = String(window.SOINS_BOT.count);
+      return;
+    }
     if (tab === "comptes") renderComptesTab(c);
     else if (tab === "enseignants") renderEnseignantsTab(c);
     else if (tab === "suivi") renderSuiviTab(c);
@@ -2260,16 +2273,40 @@
     w.document.close();
   };
 
-  // ---------- ASSISTANT SOINS (chat local) ----------
-  function soinsScroll() {
-    var box = document.getElementById("soinsMessages");
+  // ---------- ASSISTANT SOINS (chat local — élève ET enseignant) ----------
+  // Deux chats indépendants partagent le même moteur : aucun showView()
+  // quand on répond à l'enseignant, il reste dans son espace.
+  var SOINS_IDS = {
+    eleve: { box: "soinsMessages", input: "soinsInput", lex: "soinsLexique" },
+    prof:  { box: "soinsMessagesProf", input: "soinsInputProf", lex: "soinsLexiqueProf" }
+  };
+  function soinsScope(explicit) {
+    if (explicit === "prof" || explicit === "eleve") {
+      window.SOINS_SCOPE = explicit;
+      return explicit;
+    }
+    var s = STATE.view === "enseignant" ? "prof" : "eleve";
+    window.SOINS_SCOPE = s;
+    return s;
+  }
+  function soinsIds(scope) { return SOINS_IDS[soinsScope(scope)]; }
+  function soinsScroll(scope) {
+    var box = document.getElementById(soinsIds(scope).box);
     if (box) box.scrollTop = box.scrollHeight;
   }
-  window.askSoinsBot = function (question) {
+  function soinsGreeting(scope) {
+    var msg = scope === "prof"
+      ? '<p class="soins-def">Bonjour 👋 Je suis l’<b>Assistant Soins</b>, aussi disponible ici pour préparer vos cours. Je connais le vocabulaire technique du Bac Pro ASSP, l’anatomie et les gestes professionnels : définitions, schémas et conduites à tenir.</p>'
+      : '<p class="soins-def">Conversation effacée 👋 Pose-moi une nouvelle question sur le vocabulaire des soins !</p>';
+    return '<div class="soins-msg soins-msg--bot"><div class="soins-avatar">🤖</div><div class="soins-bubble">' + msg + '</div></div>';
+  }
+  window.askSoinsBot = function (question, scope) {
     var q = String(question || "").trim();
     if (!q) return;
-    showView("soins");
-    var box = document.getElementById("soinsMessages");
+    var s = soinsScope(scope);
+    if (s === "eleve") showView("soins"); // l'enseignant ne quitte PAS son espace
+    var ids = SOINS_IDS[s];
+    var box = document.getElementById(ids.box);
     if (!box) return;
     var user = document.createElement("div");
     user.className = "soins-msg soins-msg--user";
@@ -2282,7 +2319,7 @@
     typing.className = "soins-msg soins-msg--bot soins-typing";
     typing.innerHTML = '<div class="soins-avatar">🤖</div><div class="soins-bubble">Je réfléchis…</div>';
     box.appendChild(typing);
-    soinsScroll();
+    soinsScroll(s);
     setTimeout(function () {
       typing.remove();
       var bot = document.createElement("div");
@@ -2297,31 +2334,96 @@
         b.textContent = "Désolé, une erreur est survenue. Reformule ta question.";
       }
       box.appendChild(bot);
-      soinsScroll();
+      soinsScroll(s);
     }, 260);
-    var input = document.getElementById("soinsInput");
+    var input = document.getElementById(ids.input);
     if (input) { input.value = ""; input.focus(); }
   };
-  window.sendSoins = function () {
-    var input = document.getElementById("soinsInput");
-    if (input) askSoinsBot(input.value);
+  window.sendSoins = function (scope) {
+    var ids = soinsIds(scope);
+    var input = document.getElementById(ids.input);
+    if (input) askSoinsBot(input.value, soinsScope(scope));
   };
-  window.clearSoins = function () {
-    var box = document.getElementById("soinsMessages");
+  window.clearSoins = function (scope) {
+    var s = soinsScope(scope);
+    var box = document.getElementById(SOINS_IDS[s].box);
     if (!box) return;
-    box.innerHTML = '<div class="soins-msg soins-msg--bot"><div class="soins-avatar">🤖</div>' +
-      '<div class="soins-bubble"><p class="soins-def">Conversation effacée 👋 Pose-moi une nouvelle question sur le vocabulaire des soins !</p></div></div>';
+    box.innerHTML = soinsGreeting(s);
   };
-  window.toggleSoinsLexique = function () {
-    var panel = document.getElementById("soinsLexique");
+  window.toggleSoinsLexique = function (scope) {
+    var s = soinsScope(scope);
+    var panel = document.getElementById(SOINS_IDS[s].lex);
     if (!panel) return;
     if (!panel.hidden) { panel.hidden = true; return; }
     if (!panel.innerHTML && window.SOINS_BOT) panel.innerHTML = window.SOINS_BOT.lexiqueHTML();
     panel.hidden = false;
   };
+
+  // --- Schémas anatomiques (lightbox + galerie) ---
+  window.openSoinsIllu = function (key) {
+    var box = document.getElementById("soinsLightbox");
+    var body = document.getElementById("soinsIlluBody");
+    var illu = window.SOINS_ILLUSTRATIONS && window.SOINS_ILLUSTRATIONS[key];
+    if (!box || !body || !illu) return;
+    document.getElementById("soinsIlluTitle").textContent = illu.titre;
+    document.getElementById("soinsIlluLegend").textContent = illu.legende;
+    body.innerHTML = illu.svg;
+    box.hidden = false;
+    var closeBtn = document.getElementById("soinsIlluClose");
+    if (closeBtn) closeBtn.focus();
+  };
+  window.closeSoinsIllu = function () {
+    var box = document.getElementById("soinsLightbox");
+    if (box) box.hidden = true;
+  };
+  window.openSoinsGallery = function () {
+    var labels = window.SOINS_ILLUSTRATION_LABELS || {};
+    var illu = window.SOINS_ILLUSTRATIONS || {};
+    var body = document.getElementById("soinsIlluBody");
+    var box = document.getElementById("soinsLightbox");
+    if (!body || !box) return;
+    document.getElementById("soinsIlluTitle").textContent = "🗺️ Galerie des schémas anatomiques";
+    document.getElementById("soinsIlluLegend").textContent = "Clique sur un schéma pour l'agrandir. Ces dessins simplifient la réalité : ils servent à situer et à nommer.";
+    var h = '<div class="soins-gallery">';
+    Object.keys(labels).forEach(function (key) {
+      if (!illu[key]) return;
+      h += '<button class="soins-gallery__item" onclick="openSoinsIllu(' +
+        JSON.stringify(key).replace(/"/g, "&quot;") + ')">' +
+        '<span class="soins-gallery__thumb">' + illu[key].svg + '</span>' +
+        '<b>' + escapeHtml(labels[key]) + '</b></button>';
+    });
+    body.innerHTML = h + '</div>';
+    box.hidden = false;
+  };
+
+  // Révision ciblée (bouton « Réviser ce bloc » de l'espace enseignant).
+  window.soinsBlocRevision = function (bloc) {
+    soinsScope("prof");
+    var question = "Révision du bloc " + bloc;
+    var ids = SOINS_IDS.prof;
+    var box = document.getElementById(ids.box);
+    if (!box) return;
+    var u = document.createElement("div");
+    u.className = "soins-msg soins-msg--user";
+    u.innerHTML = '<div class="soins-bubble">' + escapeHtml(question) + '</div>';
+    box.appendChild(u);
+    var b = document.createElement("div");
+    b.className = "soins-msg soins-msg--bot";
+    b.innerHTML = '<div class="soins-avatar">🤖</div><div class="soins-bubble">' +
+      (window.SOINS_BOT && window.SOINS_BOT.blocAnswer
+        ? window.SOINS_BOT.blocAnswer(bloc)
+        : "<p class='soins-def'>Lexique indisponible.</p>") + '</div>';
+    box.appendChild(b);
+    soinsScroll("prof");
+  };
+
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && STATE.view === "soins" && document.activeElement &&
-        document.activeElement.id === "soinsInput") { e.preventDefault(); sendSoins(); }
+    if (e.key === "Escape") { closeSoinsIllu(); return; }
+    if (e.key === "Enter") {
+      var id = document.activeElement && document.activeElement.id;
+      if (id === "soinsInput") { e.preventDefault(); sendSoins("eleve"); }
+      else if (id === "soinsInputProf") { e.preventDefault(); sendSoins("prof"); }
+    }
   });
 
   // ---------- TOAST ----------
